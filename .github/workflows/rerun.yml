@@ -42,6 +42,8 @@ jobs:
     if: >
       github.event.issue.pull_request &&
       contains(github.event.comment.body, '/test')
+    permissions:
+      contents: read
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
@@ -49,7 +51,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: refs/pull/${{ github.event.issue.number }}/head
+          ref: refs/pull/${{ github.event.issue.number }}/merge
 
       - uses: actions/setup-go@v5
         with:
@@ -62,11 +64,14 @@ jobs:
     if: >
       github.event.issue.pull_request &&
       contains(github.event.comment.body, '/benchmark')
+    permissions:
+      contents: read
+      pull-requests: write
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: refs/pull/${{ github.event.issue.number }}/head
+          ref: refs/pull/${{ github.event.issue.number }}/merge
 
       - uses: actions/setup-go@v5
         with:
