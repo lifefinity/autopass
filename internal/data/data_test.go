@@ -86,7 +86,9 @@ func TestLoad_InvalidRegex(t *testing.T) {
     }
   }
 }`
-	os.WriteFile(path, []byte(content), 0600)
+	if err := os.WriteFile(path, []byte(content), 0600); err != nil {
+		t.Fatalf("writing test file: %v", err)
+	}
 
 	_, err := Load(path)
 	if err == nil {
@@ -107,7 +109,9 @@ func TestLoad_ReservedName(t *testing.T) {
     }
   }
 }`
-	os.WriteFile(path, []byte(content), 0600)
+	if err := os.WriteFile(path, []byte(content), 0600); err != nil {
+		t.Fatalf("writing test file: %v", err)
+	}
 
 	_, err := Load(path)
 	if err == nil {

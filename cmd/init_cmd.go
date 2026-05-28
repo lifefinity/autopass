@@ -47,7 +47,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 	_, err = crypto.DeriveKey(sshKey, nil)
 	if err != nil {
 		fmt.Print("Enter SSH key passphrase: ")
-		passphrase, readErr := term.ReadPassword(int(os.Stdin.Fd()))
+		passphrase, readErr := term.ReadPassword(int(os.Stdin.Fd())) // #nosec G115
 		fmt.Println()
 		if readErr != nil {
 			return fmt.Errorf("reading passphrase: %w", readErr)

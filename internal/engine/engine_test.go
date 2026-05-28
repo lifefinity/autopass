@@ -5,6 +5,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 	"time"
 )
@@ -48,6 +49,9 @@ func TestEngine_MultiPrompt(t *testing.T) {
 	})
 
 	if err != nil {
+		if strings.Contains(err.Error(), "Setctty") || strings.Contains(err.Error(), "starting PTY") {
+			t.Skipf("skipping: PTY not available in this environment: %v", err)
+		}
 		t.Fatalf("Run failed: %v", err)
 	}
 	if exitCode != 0 {

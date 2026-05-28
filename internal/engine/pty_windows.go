@@ -12,12 +12,11 @@ import (
 	"unsafe"
 )
 
-
 var (
-	kernel32                    = syscall.NewLazyDLL("kernel32.dll")
-	procCreatePseudoConsole     = kernel32.NewProc("CreatePseudoConsole")
-	procResizePseudoConsole     = kernel32.NewProc("ResizePseudoConsole")
-	procClosePseudoConsole      = kernel32.NewProc("ClosePseudoConsole")
+	kernel32                         = syscall.NewLazyDLL("kernel32.dll")
+	procCreatePseudoConsole          = kernel32.NewProc("CreatePseudoConsole")
+	procResizePseudoConsole          = kernel32.NewProc("ResizePseudoConsole")
+	procClosePseudoConsole           = kernel32.NewProc("ClosePseudoConsole")
 	procInitializeProcThreadAttrList = kernel32.NewProc("InitializeProcThreadAttributeList")
 	procUpdateProcThreadAttribute    = kernel32.NewProc("UpdateProcThreadAttribute")
 	procDeleteProcThreadAttrList     = kernel32.NewProc("DeleteProcThreadAttributeList")

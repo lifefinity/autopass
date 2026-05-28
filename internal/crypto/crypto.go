@@ -21,7 +21,7 @@ var (
 )
 
 func DeriveKey(sshKeyPath string, passphrase []byte) ([]byte, error) {
-	keyData, err := os.ReadFile(sshKeyPath)
+	keyData, err := os.ReadFile(sshKeyPath) // #nosec G304 -- path is from user config
 	if err != nil {
 		return nil, fmt.Errorf("reading SSH key: %w", err)
 	}
