@@ -7,13 +7,13 @@ import (
 )
 
 type Stepper struct {
-	mu       sync.Mutex
-	steps    []string
-	current  int
-	prompt   *regexp.Regexp
-	writer   io.Writer
-	active   bool
-	done     chan struct{}
+	mu      sync.Mutex
+	steps   []string
+	current int
+	prompt  *regexp.Regexp
+	writer  io.Writer
+	active  bool
+	done    chan struct{}
 }
 
 func NewStepper(steps []string, prompt string, writer io.Writer) *Stepper {
@@ -60,7 +60,7 @@ func (s *Stepper) Check(line string) {
 
 	if s.prompt.MatchString(line) {
 		cmd := s.steps[s.current]
-		s.writer.Write([]byte(cmd + "\r\n"))
+		_, _ = s.writer.Write([]byte(cmd + "\r\n"))
 		s.current++
 		if s.current >= len(s.steps) {
 			close(s.done)

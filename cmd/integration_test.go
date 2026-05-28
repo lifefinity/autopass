@@ -43,7 +43,7 @@ func setupTestData(t *testing.T) (string, func()) {
 		t.Fatalf("writing test data: %v", err)
 	}
 
-	return path, func() { os.RemoveAll(dir) }
+	return path, func() { _ = os.RemoveAll(dir) }
 }
 
 func TestDataLoad_Integration(t *testing.T) {

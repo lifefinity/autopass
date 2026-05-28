@@ -10,10 +10,6 @@ import (
 	"github.com/lifefinity/autopass/internal/engine"
 )
 
-func runProfile(profileName string) error {
-	return runProfileWithSteps(profileName, profileRunOpts{})
-}
-
 func runProfileWithSteps(profileName string, runOpts profileRunOpts) error {
 	d, err := loadData()
 	if err != nil {

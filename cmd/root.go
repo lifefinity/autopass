@@ -91,11 +91,11 @@ func loadSteps(opts profileRunOpts) ([]string, error) {
 }
 
 func readScriptFile(path string) ([]string, error) {
-	f, err := os.Open(path)
+	f, err := os.Open(path) // #nosec G304 -- path is user-provided script file
 	if err != nil {
 		return nil, fmt.Errorf("opening script file: %w", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	var lines []string
 	scanner := bufio.NewScanner(f)

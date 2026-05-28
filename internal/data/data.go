@@ -62,7 +62,7 @@ func (d *Duration) UnmarshalJSON(b []byte) error {
 }
 
 func Load(path string) (*Data, error) {
-	raw, err := os.ReadFile(path)
+	raw, err := os.ReadFile(path) // #nosec G304 -- path is from user config
 	if err != nil {
 		if os.IsNotExist(err) {
 			return &Data{Profiles: make(map[string]Profile)}, nil

@@ -3,7 +3,6 @@
 package engine
 
 import (
-	"bufio"
 	"fmt"
 	"io"
 	"os"
@@ -18,29 +17,29 @@ import (
 )
 
 func runWithPTY(opts Options, matcher *Matcher) (int, error) {
-	cmd := exec.Command(opts.Command[0], opts.Command[1:]...)
+	cmd := exec.Command(opts.Command[0], opts.Command[1:]...) // #nosec G204 -- user-provided command is by design
 
 	ptmx, err := pty.Start(cmd)
 	if err != nil {
 		return 1, fmt.Errorf("starting PTY: %w", err)
 	}
-	defer ptmx.Close()
+	defer func() { _ = ptmx.Close() }()
 
 	// Handle terminal resize
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGWINCH)
 	go func() {
 		for range sigCh {
-			pty.InheritSize(os.Stdin, ptmx)
+			_ = pty.InheritSize(os.Stdin, ptmx)
 		}
 	}()
 	sigCh <- syscall.SIGWINCH // Initial resize
 
 	// Set stdin to raw mode if it's a terminal
-	if fd := int(os.Stdin.Fd()); term.IsTerminal(fd) {
+	if fd := int(os.Stdin.Fd()); term.IsTerminal(fd) { // #nosec G115 -- safe on all supported platforms
 		oldState, err := term.MakeRaw(fd)
 		if err == nil {
-			defer term.Restore(fd, oldState)
+			defer func() { _ = term.Restore(fd, oldState) }()
 		}
 	}
 
@@ -53,7 +52,7 @@ func runWithPTY(opts Options, matcher *Matcher) (int, error) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		io.Copy(ptmx, opts.Stdin)
+		_, _ = io.Copy(ptmx, opts.Stdin)
 	}()
 
 	// Read PTY output, match patterns, forward to stdout
@@ -61,46 +60,62 @@ func runWithPTY(opts Options, matcher *Matcher) (int, error) {
 	go func() {
 		defer wg.Done()
 
+		type readResult struct {
+			data []byte
+			err  error
+		}
+		ch := make(chan readResult, 1)
+
+		// Continuous reader
+		go func() {
+			buf := make([]byte, 4096)
+			for {
+				n, err := ptmx.Read(buf)
+				if n > 0 {
+					tmp := make([]byte, n)
+					copy(tmp, buf[:n])
+					ch <- readResult{data: tmp}
+				}
+				if err != nil {
+					ch <- readResult{err: err}
+					return
+				}
+			}
+		}()
+
 		lineBuf := ""
-		buf := make([]byte, 4096)
 		timer := time.NewTimer(100 * time.Millisecond)
 		timer.Stop()
 
-		reader := bufio.NewReader(ptmx)
-
 		for {
-			n, err := reader.Read(buf)
-			if n > 0 {
-				chunk := string(buf[:n])
-				opts.Stdout.Write(buf[:n])
-
-				lineBuf += chunk
-
-				for {
-					idx := findNewline(lineBuf)
-					if idx < 0 {
-						timer.Reset(100 * time.Millisecond)
-						break
-					}
-					line := lineBuf[:idx+1]
-					lineBuf = lineBuf[idx+1:]
-					processLineUnix(matcher, stepper, line, ptmx)
-				}
-			}
-			if err != nil {
-				if lineBuf != "" {
-					processLineUnix(matcher, stepper, lineBuf, ptmx)
-				}
-				break
-			}
-
 			select {
+			case res := <-ch:
+				if len(res.data) > 0 {
+					_, _ = opts.Stdout.Write(res.data)
+					lineBuf += string(res.data)
+
+					for {
+						idx := findNewline(lineBuf)
+						if idx < 0 {
+							timer.Reset(100 * time.Millisecond)
+							break
+						}
+						line := lineBuf[:idx+1]
+						lineBuf = lineBuf[idx+1:]
+						processLineUnix(matcher, stepper, line, ptmx)
+					}
+				}
+				if res.err != nil {
+					if lineBuf != "" {
+						processLineUnix(matcher, stepper, lineBuf, ptmx)
+					}
+					return
+				}
 			case <-timer.C:
 				if lineBuf != "" {
 					processLineUnix(matcher, stepper, lineBuf, ptmx)
 					lineBuf = ""
 				}
-			default:
 			}
 		}
 	}()
@@ -108,6 +123,8 @@ func runWithPTY(opts Options, matcher *Matcher) (int, error) {
 	err = cmd.Wait()
 	signal.Stop(sigCh)
 	close(sigCh)
+	_ = ptmx.Close() // unblock reader goroutine
+	wg.Wait()
 
 	exitCode := 0
 	if err != nil {
@@ -124,7 +141,7 @@ func runWithPTY(opts Options, matcher *Matcher) (int, error) {
 func processLineUnix(matcher *Matcher, stepper *Stepper, line string, ptmx *os.File) {
 	result := matcher.Check(line)
 	if result != nil {
-		ptmx.Write([]byte(result.Response + "\n"))
+		_, _ = ptmx.Write([]byte(result.Response + "\n"))
 		stepper.Activate()
 		return
 	}

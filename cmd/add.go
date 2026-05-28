@@ -95,7 +95,7 @@ func runAdd(cmd *cobra.Command, args []string) error {
 	}
 
 	fmt.Printf("Enter secret (will be hidden): ")
-	secret, err := term.ReadPassword(int(os.Stdin.Fd()))
+	secret, err := term.ReadPassword(int(os.Stdin.Fd())) // #nosec G115
 	fmt.Println()
 	if err != nil {
 		return fmt.Errorf("reading secret: %w", err)

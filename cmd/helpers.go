@@ -60,7 +60,7 @@ func deriveKey() ([]byte, error) {
 	key, err := crypto.DeriveKey(sshKeyPath, nil)
 	if err != nil {
 		fmt.Print("Enter SSH key passphrase: ")
-		passphrase, readErr := term.ReadPassword(int(os.Stdin.Fd()))
+		passphrase, readErr := term.ReadPassword(int(os.Stdin.Fd())) // #nosec G115
 		fmt.Println()
 		if readErr != nil {
 			return nil, fmt.Errorf("reading passphrase: %w", readErr)
