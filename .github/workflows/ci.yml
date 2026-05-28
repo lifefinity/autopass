@@ -8,6 +8,8 @@ on:
 
 jobs:
   test:
+    permissions:
+      contents: read
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
@@ -29,6 +31,8 @@ jobs:
         run: go test -v -count=1 ./...
 
   lint:
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -43,6 +47,8 @@ jobs:
           version: latest
 
   security:
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

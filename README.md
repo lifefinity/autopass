@@ -11,6 +11,31 @@ A CLI tool that automatically answers interactive prompts (passwords, PINs, pass
 | sshpass | Single command only | Plaintext flag or env var | Linux only | Low |
 | ansible vault | Playbook-level | Encrypted vault | Via Ansible | High |
 
+## Installation
+
+### Download Binary
+
+Download the latest release from [Releases](https://github.com/lifefinity/autopass/releases/latest):
+
+```bash
+# Linux (amd64)
+curl -sL https://github.com/lifefinity/autopass/releases/latest/download/autopass-linux-amd64 -o autopass
+chmod +x autopass && sudo mv autopass /usr/local/bin/
+
+# macOS (Apple Silicon)
+curl -sL https://github.com/lifefinity/autopass/releases/latest/download/autopass-darwin-arm64 -o autopass
+chmod +x autopass && sudo mv autopass /usr/local/bin/
+
+# Windows — download autopass-windows-amd64.exe from Releases page
+```
+
+### Build from Source
+
+```bash
+git clone https://github.com/lifefinity/autopass.git
+cd autopass && make build
+```
+
 ## Quick Start
 
 ```bash
