@@ -10,7 +10,7 @@
 **Encrypted expect in one binary** — auto-answer interactive prompts (passwords, PINs, passphrases) with secrets encrypted at rest.
 
 <p align="center">
-  <img src="demo.gif" alt="autopass demo" width="600">
+  <img src="demo.svg" alt="autopass demo" width="680">
 </p>
 
 ## Why autopass?
