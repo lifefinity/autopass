@@ -18,6 +18,9 @@ import (
 
 func runWithPTY(opts Options, matcher *Matcher) (int, error) {
 	cmd := exec.Command(opts.Command[0], opts.Command[1:]...) // #nosec G204 -- user-provided command is by design
+	if len(opts.Env) > 0 {
+		cmd.Env = append(os.Environ(), opts.Env...)
+	}
 
 	ptmx, err := pty.Start(cmd)
 	if err != nil {
@@ -44,15 +47,26 @@ func runWithPTY(opts Options, matcher *Matcher) (int, error) {
 	}
 
 	// Create stepper for post-login step execution
-	stepper := NewStepper(opts.Steps, opts.Prompt, ptmx)
+	var ptmxMu sync.Mutex
+	stepper := NewStepper(opts.Steps, opts.Prompt, &syncWriter{w: ptmx, mu: &ptmxMu})
 
 	var wg sync.WaitGroup
 
-	// Forward user input to PTY
-	wg.Add(1)
+	// Forward user input to PTY (mutex-protected writes)
+	// Not in WaitGroup: stdin.Read blocks until user types; we don't wait for it on exit.
 	go func() {
-		defer wg.Done()
-		_, _ = io.Copy(ptmx, opts.Stdin)
+		buf := make([]byte, 4096)
+		for {
+			n, err := opts.Stdin.Read(buf)
+			if n > 0 {
+				ptmxMu.Lock()
+				_, _ = ptmx.Write(buf[:n])
+				ptmxMu.Unlock()
+			}
+			if err != nil {
+				return
+			}
+		}
 	}()
 
 	// Read PTY output, match patterns, forward to stdout
@@ -102,18 +116,18 @@ func runWithPTY(opts Options, matcher *Matcher) (int, error) {
 						}
 						line := lineBuf[:idx+1]
 						lineBuf = lineBuf[idx+1:]
-						processLineUnix(matcher, stepper, line, ptmx)
+						processLineUnix(matcher, stepper, line, ptmx, &ptmxMu)
 					}
 				}
 				if res.err != nil {
 					if lineBuf != "" {
-						processLineUnix(matcher, stepper, lineBuf, ptmx)
+						processLineUnix(matcher, stepper, lineBuf, ptmx, &ptmxMu)
 					}
 					return
 				}
 			case <-timer.C:
 				if lineBuf != "" {
-					processLineUnix(matcher, stepper, lineBuf, ptmx)
+					processLineUnix(matcher, stepper, lineBuf, ptmx, &ptmxMu)
 					lineBuf = ""
 				}
 			}
@@ -138,14 +152,17 @@ func runWithPTY(opts Options, matcher *Matcher) (int, error) {
 	return exitCode, nil
 }
 
-func processLineUnix(matcher *Matcher, stepper *Stepper, line string, ptmx *os.File) {
-	result := matcher.Check(line)
+func processLineUnix(matcher *Matcher, stepper *Stepper, line string, ptmx *os.File, mu *sync.Mutex) {
+	clean := stripAnsi(line)
+	result := matcher.Check(clean)
 	if result != nil {
+		mu.Lock()
 		_, _ = ptmx.Write([]byte(result.Response + "\n"))
+		mu.Unlock()
 		stepper.Activate()
 		return
 	}
-	stepper.Check(line)
+	stepper.Check(clean)
 }
 
 func findNewline(s string) int {
@@ -155,4 +172,15 @@ func findNewline(s string) int {
 		}
 	}
 	return -1
+}
+
+type syncWriter struct {
+	w  io.Writer
+	mu *sync.Mutex
+}
+
+func (sw *syncWriter) Write(p []byte) (int, error) {
+	sw.mu.Lock()
+	defer sw.mu.Unlock()
+	return sw.w.Write(p)
 }

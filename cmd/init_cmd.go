@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -12,13 +13,34 @@ import (
 	"github.com/lifefinity/autopass/internal/data"
 )
 
+var (
+	initNoPassphrase bool
+	initKey          string
+)
+
 var initCmd = &cobra.Command{
 	Use:   "init",
 	Short: "Initialize autopass (first-time setup)",
-	RunE:  runInit,
+	Long: `Initialize autopass with an encryption key.
+
+Key selection (in order of priority):
+  1. --key <path>     Use a specific SSH private key
+  2. ~/.ssh/          Auto-detect: id_ed25519 > id_rsa > id_ecdsa
+  3. (none found)     Generate a dedicated key at ~/.autopass/autopass_key
+
+If the selected key is passphrase-protected, you will be prompted once
+to verify access. Subsequent 'autopass' runs will also prompt if needed.
+
+Examples:
+  autopass init                          # Auto-detect or generate
+  autopass init --key ~/.ssh/id_rsa      # Use a specific key
+  autopass init --no-passphrase          # Generate key without passphrase`,
+	RunE: runInit,
 }
 
 func init() {
+	initCmd.Flags().BoolVar(&initNoPassphrase, "no-passphrase", false, "skip passphrase protection for generated key")
+	initCmd.Flags().StringVar(&initKey, "key", "", "path to an existing SSH private key to use")
 	rootCmd.AddCommand(initCmd)
 }
 
@@ -36,12 +58,39 @@ func runInit(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	sshKey := findSSHKey(home)
-	if sshKey == "" {
-		return fmt.Errorf("no SSH key found in ~/.ssh/. Generate one with: ssh-keygen -t ed25519")
+	var sshKey string
+
+	if initKey != "" {
+		// User specified a key path
+		sshKey = initKey
+		fmt.Printf("Using specified key: %s\n", sshKey)
+	} else {
+		sshKey = findSSHKey(home)
 	}
 
-	fmt.Printf("Using SSH key: %s\n", sshKey)
+	if sshKey == "" {
+		// No SSH key found — generate a dedicated autopass key
+		sshKey = filepath.Join(autopassDir, "autopass_key")
+
+		var passphrase []byte
+		if !initNoPassphrase {
+			passphrase, err = promptNewPassphrase()
+			if err != nil {
+				return err
+			}
+		}
+
+		fmt.Println("Generating autopass encryption key...")
+		if err := crypto.GenerateKey(sshKey, passphrase); err != nil {
+			return fmt.Errorf("generating key: %w", err)
+		}
+		fmt.Printf("Created: %s\n", sshKey)
+		if len(passphrase) == 0 {
+			fmt.Println("⚠️  Key is unprotected (no passphrase). OK for full-disk encrypted machines.")
+		}
+	} else {
+		fmt.Printf("Using SSH key: %s\n", sshKey)
+	}
 
 	// Verify we can read the key (may need passphrase)
 	_, err = crypto.DeriveKey(sshKey, nil)
@@ -71,6 +120,38 @@ func runInit(cmd *cobra.Command, args []string) error {
 	fmt.Println("Initialized. Data at:", dataFilePath)
 	fmt.Println("Next: run 'autopass add <name>' to store a secret.")
 	return nil
+}
+
+func promptNewPassphrase() ([]byte, error) {
+	fd := int(os.Stdin.Fd()) // #nosec G115
+	if !term.IsTerminal(fd) {
+		// Non-interactive (e.g. auto-init from loadData) — skip passphrase
+		return nil, nil
+	}
+
+	fmt.Print("Set a passphrase to protect your encryption key (empty = no passphrase): ")
+	p1, err := term.ReadPassword(fd)
+	fmt.Println()
+	if err != nil {
+		return nil, fmt.Errorf("reading passphrase: %w", err)
+	}
+
+	if len(p1) == 0 {
+		return nil, nil
+	}
+
+	fmt.Print("Confirm passphrase: ")
+	p2, err := term.ReadPassword(fd)
+	fmt.Println()
+	if err != nil {
+		return nil, fmt.Errorf("reading passphrase confirmation: %w", err)
+	}
+
+	if !bytes.Equal(p1, p2) {
+		return nil, fmt.Errorf("passphrases do not match")
+	}
+
+	return p1, nil
 }
 
 func findSSHKey(home string) string {

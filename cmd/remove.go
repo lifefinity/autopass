@@ -12,7 +12,13 @@ var removeCmd = &cobra.Command{
 	Use:   "remove <profile>",
 	Short: "Delete a profile and its secret",
 	Args:  cobra.ExactArgs(1),
-	RunE:  runRemove,
+	ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		if len(args) != 0 {
+			return nil, cobra.ShellCompDirectiveNoFileComp
+		}
+		return completeProfileNames(toComplete), cobra.ShellCompDirectiveNoFileComp
+	},
+	RunE: runRemove,
 }
 
 func init() {

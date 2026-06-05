@@ -23,17 +23,21 @@ func setupTestData(t *testing.T) (string, func()) {
 		SSHKey: filepath.Join(dir, "fake_key"),
 		Profiles: map[string]data.Profile{
 			"myserver": {
-				Command:  "ssh user@host",
-				Patterns: []data.Pattern{{Match: "(?i)password:", Hidden: true}},
-				Secret:   "ZW5jcnlwdGVk", // base64("encrypted")
-				Timeout:  data.Duration{Duration: 30 * time.Second},
+				Command:     "ssh user@host",
+				Description: "Production SSH",
+				Patterns:    []data.Pattern{{Match: "(?i)password:", Hidden: true}},
+				Secret:      "ZW5jcnlwdGVk", // base64("encrypted")
+				Timeout:     data.Duration{Duration: 30 * time.Second},
+				After:       []string{"echo done"},
 			},
 			"mydb": {
-				Command:  "psql -h localhost -U admin",
-				Patterns: []data.Pattern{{Match: "(?i)password", Hidden: true}},
-				Secret:   "ZGJzZWNyZXQ=", // base64("dbsecret")
-				Prompt:   "=>\\s*$",
-				Timeout:  data.Duration{Duration: 60 * time.Second},
+				Command:     "psql -h localhost -U admin",
+				Description: "Local PostgreSQL",
+				Patterns:    []data.Pattern{{Match: "(?i)password", Hidden: true}},
+				Secret:      "ZGJzZWNyZXQ=", // base64("dbsecret")
+				Prompt:      "=>\\s*$",
+				Timeout:     data.Duration{Duration: 60 * time.Second},
+				Steps:       []string{"\\timing on", "SELECT 1;"},
 			},
 		},
 	}
@@ -173,5 +177,87 @@ func TestDataListProfiles_Integration(t *testing.T) {
 	// Should be sorted
 	if names[0] != "mydb" || names[1] != "myserver" {
 		t.Fatalf("expected sorted [mydb, myserver], got %v", names)
+	}
+}
+
+func TestProfileFields_Integration(t *testing.T) {
+	path, cleanup := setupTestData(t)
+	defer cleanup()
+
+	d, err := data.Load(path)
+	if err != nil {
+		t.Fatalf("Load failed: %v", err)
+	}
+
+	// Verify Description
+	if d.Profiles["myserver"].Description != "Production SSH" {
+		t.Errorf("expected description 'Production SSH', got %q", d.Profiles["myserver"].Description)
+	}
+
+	// Verify Steps
+	if len(d.Profiles["mydb"].Steps) != 2 {
+		t.Fatalf("expected 2 steps, got %d", len(d.Profiles["mydb"].Steps))
+	}
+	if d.Profiles["mydb"].Steps[0] != "\\timing on" {
+		t.Errorf("unexpected step[0]: %s", d.Profiles["mydb"].Steps[0])
+	}
+
+	// Verify After
+	if len(d.Profiles["myserver"].After) != 1 || d.Profiles["myserver"].After[0] != "echo done" {
+		t.Errorf("unexpected after: %v", d.Profiles["myserver"].After)
+	}
+}
+
+func TestParseProfileArgs_Env(t *testing.T) {
+	args := []string{"myprofile", "-e", "HOST=prod", "--env", "USER=admin"}
+	name, opts := parseProfileArgs(args)
+	if name != "myprofile" {
+		t.Errorf("expected name 'myprofile', got %q", name)
+	}
+	if len(opts.env) != 2 {
+		t.Fatalf("expected 2 env vars, got %d", len(opts.env))
+	}
+	if opts.env[0] != "HOST=prod" || opts.env[1] != "USER=admin" {
+		t.Errorf("unexpected env: %v", opts.env)
+	}
+}
+
+func TestParseProfileArgs_After(t *testing.T) {
+	args := []string{"mwinit", "--after", "date", "--after", "echo ok"}
+	name, opts := parseProfileArgs(args)
+	if name != "mwinit" {
+		t.Errorf("expected name 'mwinit', got %q", name)
+	}
+	if len(opts.after) != 2 {
+		t.Fatalf("expected 2 after cmds, got %d", len(opts.after))
+	}
+	if opts.after[0] != "date" || opts.after[1] != "echo ok" {
+		t.Errorf("unexpected after: %v", opts.after)
+	}
+}
+
+func TestParseProfileArgs_Combined(t *testing.T) {
+	args := []string{"prod", "--then", "ls", "--script", "deploy.sql", "--prompt", "=>", "-e", "ENV=prod", "--after", "notify", "--quiet"}
+	name, opts := parseProfileArgs(args)
+	if name != "prod" {
+		t.Errorf("expected name 'prod', got %q", name)
+	}
+	if len(opts.then) != 1 || opts.then[0] != "ls" {
+		t.Errorf("unexpected then: %v", opts.then)
+	}
+	if opts.scriptFile != "deploy.sql" {
+		t.Errorf("unexpected script: %s", opts.scriptFile)
+	}
+	if opts.prompt != "=>" {
+		t.Errorf("unexpected prompt: %s", opts.prompt)
+	}
+	if len(opts.env) != 1 || opts.env[0] != "ENV=prod" {
+		t.Errorf("unexpected env: %v", opts.env)
+	}
+	if len(opts.after) != 1 || opts.after[0] != "notify" {
+		t.Errorf("unexpected after: %v", opts.after)
+	}
+	if !opts.quiet {
+		t.Error("expected quiet=true")
 	}
 }

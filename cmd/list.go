@@ -32,7 +32,7 @@ func runList(cmd *cobra.Command, args []string) error {
 	}
 
 	// Calculate column widths
-	maxName, maxCmd, maxPrompt := len("NAME"), len("COMMAND"), len("AUTO-ANSWERS")
+	maxName, maxCmd := len("NAME"), len("COMMAND")
 	for name, profile := range d.Profiles {
 		if len(name) > maxName {
 			maxName = len(name)
@@ -40,23 +40,23 @@ func runList(cmd *cobra.Command, args []string) error {
 		if len(profile.Command) > maxCmd {
 			maxCmd = len(profile.Command)
 		}
-		for _, p := range profile.Patterns {
-			friendly := friendlyPattern(p.Match)
-			if len(friendly) > maxPrompt {
-				maxPrompt = len(friendly)
-			}
-		}
 	}
 
-	header := fmt.Sprintf("  %-*s  %-*s  %s", maxName, "NAME", maxCmd, "COMMAND", "AUTO-ANSWERS")
+	header := fmt.Sprintf("  %-*s  %-*s  %s", maxName, "NAME", maxCmd, "COMMAND", "DESCRIPTION")
 	fmt.Println(header)
 	fmt.Println("  " + strings.Repeat("-", len(header)-2))
-	for name, profile := range d.Profiles {
-		prompts := []string{}
-		for _, p := range profile.Patterns {
-			prompts = append(prompts, friendlyPattern(p.Match))
+	for _, name := range names {
+		profile := d.Profiles[name]
+		desc := profile.Description
+		if desc == "" {
+			// Fallback: show matched patterns
+			prompts := []string{}
+			for _, p := range profile.Patterns {
+				prompts = append(prompts, friendlyPattern(p.Match))
+			}
+			desc = strings.Join(prompts, ", ")
 		}
-		fmt.Printf("  %-*s  %-*s  %s\n", maxName, name, maxCmd, profile.Command, strings.Join(prompts, ", "))
+		fmt.Printf("  %-*s  %-*s  %s\n", maxName, name, maxCmd, profile.Command, desc)
 	}
 	fmt.Println()
 	fmt.Println("Run: autopass <name>")
@@ -89,7 +89,7 @@ func printExamples() {
 	fmt.Println("  autopass add git-push     # Git HTTPS credential")
 	fmt.Println()
 	fmt.Println("Or with flags:")
-	fmt.Println("  autopass add -c \"ssh user@host\" -m \"(?i)password:\" myserver")
+	fmt.Println("  autopass add -c \"ssh user@host\" -m \"password:\" myserver")
 	fmt.Println()
 	fmt.Println("Then run: autopass <name>")
 }
