@@ -25,12 +25,14 @@ linters:
         - name: exported
           disabled: true
 
+  exclusions:
+    paths:
+      - testdata
+
 formatters:
   enable:
     - gofmt
 
 issues:
-  exclude-dirs:
-    - testdata
   max-issues-per-linter: 0
   max-same-issues: 0
