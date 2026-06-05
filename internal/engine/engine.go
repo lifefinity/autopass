@@ -14,6 +14,7 @@ type Options struct {
 	Timeout  time.Duration
 	Steps    []string
 	Prompt   string
+	Env      []string
 	Stdin    io.Reader
 	Stdout   io.Writer
 	Stderr   io.Writer

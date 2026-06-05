@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 
 	"golang.org/x/crypto/hkdf"
 	"golang.org/x/crypto/ssh"
@@ -110,4 +111,44 @@ func extractPrivateKeyBytes(pemData, passphrase []byte) ([]byte, error) {
 		}
 		return block.Bytes, nil
 	}
+}
+
+// GenerateKey creates a new ed25519 private key and writes it in OpenSSH format.
+// If passphrase is non-empty, the key is encrypted with it.
+func GenerateKey(path string, passphrase []byte) error {
+	_, priv, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		return fmt.Errorf("generating ed25519 key: %w", err)
+	}
+
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, 0700); err != nil {
+		return fmt.Errorf("creating key directory: %w", err)
+	}
+
+	signer, err := ssh.NewSignerFromKey(priv)
+	if err != nil {
+		return fmt.Errorf("creating signer: %w", err)
+	}
+
+	comment := ""
+	var pemBlock *pem.Block
+	if len(passphrase) > 0 {
+		pemBlock, err = ssh.MarshalPrivateKeyWithPassphrase(priv, comment, passphrase)
+	} else {
+		pemBlock, err = ssh.MarshalPrivateKey(priv, comment)
+	}
+	if err != nil {
+		return fmt.Errorf("marshaling private key: %w", err)
+	}
+
+	if err := os.WriteFile(path, pem.EncodeToMemory(pemBlock), 0600); err != nil {
+		return fmt.Errorf("writing key file: %w", err)
+	}
+
+	// Write public key for reference
+	pubKey := ssh.MarshalAuthorizedKey(signer.PublicKey())
+	_ = os.WriteFile(path+".pub", pubKey, 0644) // #nosec G306 -- public key
+
+	return nil
 }

@@ -1,5 +1,7 @@
 # autopass
 
+[中文文档](docs/README_zh.md)
+
 A CLI tool that automatically answers interactive prompts (passwords, PINs, passphrases) with encrypted secrets. Think `expect`, but simpler and with built-in secret management.
 
 ## Why autopass?
@@ -43,7 +45,7 @@ cd autopass && make build
 make build    # → bin/autopass.exe (with version info)
 
 # 1. Add a profile
-autopass add -c "ssh user@server" -m "(?i)password:" myserver
+autopass add -c "ssh user@server" -m "password:" myserver
 
 # 2. Run it — password auto-filled
 autopass myserver
@@ -71,28 +73,28 @@ autopass myserver
 
 ```bash
 # SSH server
-autopass add -c "ssh deploy@prod-server" -m "(?i)password:" prod
+autopass add -c "ssh deploy@prod-server" -m "password:" prod
 
 # PostgreSQL
-autopass add -c "psql -h db.example.com -U admin mydb" -m "(?i)password" -p "=>\s*$" mydb
+autopass add -c "psql -h db.example.com -U admin mydb" -m "password" -p "=>\s*$" mydb
 
 # MySQL
-autopass add -c "mysql -h db.example.com -u root -p" -m "(?i)password:" mysql-prod
+autopass add -c "mysql -h db.example.com -u root -p" -m "password:" mysql-prod
 
 # Docker registry
-autopass add -c "docker login registry.example.com -u ci" -m "(?i)password:" docker-reg
+autopass add -c "docker login registry.example.com -u ci" -m "password:" docker-reg
 
 # Sudo
-autopass add -c "sudo apt upgrade -y" -m "(?i)password" apt-upgrade
+autopass add -c "sudo apt upgrade -y" -m "password" apt-upgrade
 
 # Kerberos
-autopass add -c "kinit admin@EXAMPLE.COM" -m "(?i)password for" krb
+autopass add -c "kinit admin@EXAMPLE.COM" -m "password for" krb
 
 # Redis CLI (AUTH)
-autopass add -c "redis-cli -h cache.example.com" -m "(?i)password:" redis
+autopass add -c "redis-cli -h cache.example.com" -m "password:" redis
 
 # FTP
-autopass add -c "ftp files.example.com" -m "(?i)password:" ftp-files
+autopass add -c "ftp files.example.com" -m "password:" ftp-files
 ```
 
 ### Post-Login Commands
@@ -119,8 +121,35 @@ autopass update prod --secret
 # Change the command
 autopass update prod -c "ssh newuser@prod-server"
 
-# Change multiple fields
-autopass update mysql-prod -m "(?i)enter password:" --secret
+# Change match pattern and timeout
+autopass update mysql-prod -m "enter password:" -t 60s
+
+# Change description
+autopass update prod -d "Production deployment server"
+
+# Set post-login steps
+autopass update mydb --then "\timing on" --then "SET search_path TO app;"
+
+# Set post-exit commands
+autopass update mwinit --after "date" --after "echo done"
+
+# Enable case-sensitive matching
+autopass update myserver --case-sensitive
+```
+
+### Quiet Mode
+
+Run without terminal output (useful for scripts/CI):
+
+```bash
+# Silent execution — password still auto-filled
+autopass mydb --quiet --script queries.sql
+
+# Short form
+autopass mydb -q --then "SELECT 1;"
+
+# Capture output to file (without --quiet, stdout has PTY output)
+autopass mydb --script queries.sql > result.txt
 ```
 
 ## Commands
@@ -132,13 +161,46 @@ autopass update mysql-prod -m "(?i)enter password:" --secret
 | `autopass update <profile>` | Update specific fields of a profile |
 | `autopass list` | Show all profiles |
 | `autopass remove <profile>` | Delete a profile |
+| `autopass change-key <path>` | Switch to a new SSH key for encryption |
+| `autopass export <file>` | Export profiles to JSON (without secrets) |
+| `autopass import <file>` | Import profiles from JSON |
+| `autopass backup <dir>` | Backup key + data to a directory |
+| `autopass restore <dir>` | Restore key + data from a backup |
+| `autopass completion <shell>` | Generate shell completion (bash/zsh/fish/powershell) |
 | `autopass version` | Print version info |
 | `autopass init` | First-time setup |
+
+## Pattern Matching
+
+- **Case-insensitive by default** — `"password:"` matches `Password:`, `PASSWORD:`, etc.
+- Use `--case-sensitive` flag when adding/updating a profile for exact case matching
+- Patterns are Go regular expressions (e.g. `"password|passphrase"` matches either)
+
+## Backup & Restore
+
+```bash
+# Backup key and encrypted data to a directory
+autopass backup /mnt/usb/autopass-backup
+
+# Restore on a new machine
+autopass restore /mnt/usb/autopass-backup
+
+# Overwrite existing data
+autopass restore ~/backup --force
+```
+
+Export/import profiles *without* the encryption key (for sharing configs):
+
+```bash
+autopass export profiles.json    # secrets excluded
+autopass import profiles.json    # merge with existing (--force to overwrite)
+```
 
 ## Security
 
 - Secrets encrypted with **AES-256-GCM** (random nonce per secret)
 - Encryption key derived from your **SSH private key** via HKDF-SHA256 — never stored on disk
+- If no SSH key exists, a dedicated ed25519 key is auto-generated at `~/.autopass/autopass_key`
 - Data file at `~/.autopass/data.json` with 0600 permissions
 - No plaintext secrets anywhere
 

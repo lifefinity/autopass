@@ -3,7 +3,10 @@ package cmd
 import (
 	"encoding/base64"
 	"fmt"
+	"io"
 	"os"
+	"os/exec"
+	"strings"
 	"time"
 
 	"github.com/lifefinity/autopass/internal/crypto"
@@ -44,23 +47,52 @@ func runProfileWithSteps(profileName string, runOpts profileRunOpts) error {
 		if err != nil {
 			return fmt.Errorf("decrypting secret: %w", err)
 		}
+		defer func() {
+			for i := range plaintext {
+				plaintext[i] = 0
+			}
+		}()
 		secret = string(plaintext)
 	}
 
 	// Build engine patterns: each pattern's response is the decrypted secret
 	enginePatterns := make([]engine.Pattern, len(profile.Patterns))
 	for i, p := range profile.Patterns {
+		match := p.Match
+		if !p.CaseSensitive && !strings.HasPrefix(match, "(?i)") {
+			match = "(?i)" + match
+		}
 		enginePatterns[i] = engine.Pattern{
-			Match:   p.Match,
+			Match:   match,
 			Respond: secret,
 			Hidden:  p.Hidden,
 		}
 	}
 
-	// Load post-login steps
+	// Load post-login steps: profile steps first, then runtime --then/--script
 	steps, err := loadSteps(runOpts)
 	if err != nil {
 		return err
+	}
+	if len(profile.Steps) > 0 {
+		steps = append(profile.Steps, steps...)
+	}
+
+	// Dry-run: print config and exit without running
+	if runOpts.dryRun {
+		fmt.Printf("Command: %s\n", profile.Command)
+		fmt.Printf("Timeout: %s\n", timeout)
+		fmt.Println("Patterns:")
+		for _, p := range enginePatterns {
+			fmt.Printf("  - %s\n", p.Match)
+		}
+		if len(steps) > 0 {
+			fmt.Println("Steps:")
+			for _, s := range steps {
+				fmt.Printf("  - %s\n", s)
+			}
+		}
+		return nil
 	}
 
 	// Determine prompt pattern (CLI override > profile > empty)
@@ -75,10 +107,26 @@ func runProfileWithSteps(profileName string, runOpts profileRunOpts) error {
 		Timeout:  timeout,
 		Steps:    steps,
 		Prompt:   prompt,
+		Env:      runOpts.env,
+		Stdout:   quietWriter(runOpts.quiet),
 	})
 
 	if err != nil {
 		return err
+	}
+
+	// Run --after commands if main process succeeded
+	if exitCode == 0 {
+		afterCmds := append(profile.After, runOpts.after...)
+		for _, cmd := range afterCmds {
+			afterCmd := exec.Command("sh", "-c", cmd) // #nosec G204 -- user-provided post-exit command is by design
+			afterCmd.Stdin = os.Stdin
+			afterCmd.Stdout = os.Stdout
+			afterCmd.Stderr = os.Stderr
+			if runErr := afterCmd.Run(); runErr != nil {
+				fmt.Fprintf(os.Stderr, "after command failed: %v\n", runErr)
+			}
+		}
 	}
 
 	os.Exit(exitCode)
@@ -115,4 +163,11 @@ func splitCommand(cmd string) []string {
 		fields = append(fields, current)
 	}
 	return fields
+}
+
+func quietWriter(quiet bool) io.Writer {
+	if quiet {
+		return io.Discard
+	}
+	return nil // engine defaults to os.Stdout
 }

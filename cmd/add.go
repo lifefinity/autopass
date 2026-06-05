@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bufio"
 	"encoding/base64"
 	"fmt"
 	"os"
@@ -15,10 +16,14 @@ import (
 )
 
 var (
-	addCommand string
-	addMatch   string
-	addPrompt  string
-	addTimeout string
+	addCommand       string
+	addMatch         []string
+	addPrompt        string
+	addTimeout       string
+	addCaseSensitive bool
+	addSteps         []string
+	addAfter         []string
+	addDesc          string
 )
 
 var addCmd = &cobra.Command{
@@ -29,40 +34,67 @@ prompts. Run with 'autopass <profile>' afterwards.
 
 Examples:
   # SSH server
-  autopass add -c "ssh deploy@prod-server" -m "(?i)password:" prod
+  autopass add -c "ssh deploy@prod-server" -m "password:" prod
 
-  # PostgreSQL
-  autopass add -c "psql -h db.example.com -U admin mydb" -m "(?i)password" mydb
+  # PostgreSQL (with prompt pattern for post-login commands)
+  autopass add -c "psql -h db.example.com -U admin mydb" -m "password" -p "=>\s*$" mydb
 
   # MySQL
-  autopass add -c "mysql -h db.example.com -u root -p" -m "(?i)password:" mysql-prod
+  autopass add -c "mysql -h db.example.com -u root -p" -m "password:" mysql-prod
 
   # Sudo
-  autopass add -c "sudo apt upgrade -y" -m "(?i)password" apt-upgrade
-
-  # Docker registry
-  autopass add -c "docker login registry.example.com -u ci" -m "(?i)password:" docker-reg
+  autopass add -c "sudo apt upgrade -y" -m "password" apt-upgrade
 
   # Kerberos
-  autopass add -c "kinit admin@EXAMPLE.COM" -m "(?i)password for" krb
-
-  # Redis CLI
-  autopass add -c "redis-cli -h cache.example.com" -m "(?i)password:" redis
-
-  # FTP
-  autopass add -c "ftp files.example.com" -m "(?i)password:" ftp-files
+  autopass add -c "kinit admin@EXAMPLE.COM" -m "password for" krb
 
   # Interactive mode (prompts for command and pattern)
-  autopass add myservice`,
+  autopass add myservice
+
+Post-login automation (use --then/--script when running):
+  autopass mydb --then "SELECT now();" --then "\q"
+  autopass mydb --script queries.sql
+
+  The -p/--prompt flag in 'add' tells autopass what the shell prompt looks
+  like, so it knows when to send the next --then command.
+
+Post-exit commands (--after):
+  Run commands in a new shell after the profile process exits successfully.
+  Useful for non-interactive tools like mwinit, kinit, or ssh one-shot commands.
+
+  # mwinit completes → run date
+  autopass add -c "mwinit -s -o" -m "PIN:" --after "date" mwinit
+
+  # SSH session ends → sync local files
+  autopass add -c "ssh deploy@prod" -m "password:" --after "echo 'session ended'" prod
+
+  # Chain multiple post-exit commands
+  autopass add -c "kinit user@REALM" -m "Password:" \
+    --after "klist" --after "echo 'ticket acquired'" krb
+
+Pattern matching tips:
+  Patterns are regex and case-insensitive by default. A partial match is enough.
+  # "password" matches "Password for user demo1:", "Enter password:", etc.
+  autopass add -c "psql -U demo1 -h localhost" -m "password" mydb
+
+  # Use regex for more control: match any username
+  autopass add -c "psql -U admin -h db" -m "Password for user .+:" mydb
+
+  # Match multiple different prompts
+  autopass add -c "ssh host" -m "password" -m "passphrase" myserver`,
 	Args: cobra.ExactArgs(1),
 	RunE: runAdd,
 }
 
 func init() {
 	addCmd.Flags().StringVarP(&addCommand, "command", "c", "", "command to run for this profile")
-	addCmd.Flags().StringVarP(&addMatch, "match", "m", "", "prompt pattern to match (regex)")
+	addCmd.Flags().StringVarP(&addDesc, "desc", "d", "", "short description for this profile")
+	addCmd.Flags().StringArrayVarP(&addMatch, "match", "m", nil, "prompt pattern to match (regex, can specify multiple)")
 	addCmd.Flags().StringVarP(&addPrompt, "prompt", "p", "", "shell prompt pattern for post-login steps (regex)")
 	addCmd.Flags().StringVarP(&addTimeout, "timeout", "t", "30s", "timeout for pattern matching")
+	addCmd.Flags().BoolVar(&addCaseSensitive, "case-sensitive", false, "match pattern with exact case (default: case-insensitive)")
+	addCmd.Flags().StringArrayVar(&addSteps, "then", nil, "command to run after login (can specify multiple)")
+	addCmd.Flags().StringArrayVar(&addAfter, "after", nil, "command to run in new shell after profile exits (can specify multiple)")
 	rootCmd.AddCommand(addCmd)
 }
 
@@ -80,13 +112,14 @@ func runAdd(cmd *cobra.Command, args []string) error {
 	}
 
 	// If -m not provided, prompt interactively
-	match := addMatch
-	if match == "" {
-		fmt.Printf("Prompt to match (e.g. \"password:\") [default: (?i)password:]: ")
-		match = readLine()
-		if match == "" {
-			match = "(?i)password:"
+	matches := addMatch
+	if len(matches) == 0 {
+		fmt.Printf("Prompt to match (e.g. \"password:\") [default: password:]: ")
+		m := readLine()
+		if m == "" {
+			m = "password:"
 		}
+		matches = []string{m}
 	}
 
 	key, err := deriveKey()
@@ -100,6 +133,11 @@ func runAdd(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("reading secret: %w", err)
 	}
+	defer func() {
+		for i := range secret {
+			secret[i] = 0
+		}
+	}()
 
 	ciphertext, err := crypto.Encrypt(key, secret)
 	if err != nil {
@@ -122,14 +160,20 @@ func runAdd(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("loading data: %w", err)
 	}
 
+	patterns := make([]data.Pattern, len(matches))
+	for i, m := range matches {
+		patterns[i] = data.Pattern{Match: m, Hidden: true, CaseSensitive: addCaseSensitive}
+	}
+
 	profile := data.Profile{
-		Command: command,
-		Patterns: []data.Pattern{
-			{Match: match, Hidden: true},
-		},
-		Secret:  encryptedB64,
-		Prompt:  addPrompt,
-		Timeout: data.Duration{Duration: timeout},
+		Command:     command,
+		Description: addDesc,
+		Patterns:    patterns,
+		Secret:      encryptedB64,
+		Prompt:      addPrompt,
+		Timeout:     data.Duration{Duration: timeout},
+		Steps:       addSteps,
+		After:       addAfter,
 	}
 
 	if err := d.AddProfile(name, profile); err != nil {
@@ -146,9 +190,9 @@ func runAdd(cmd *cobra.Command, args []string) error {
 }
 
 func readLine() string {
-	var buf [512]byte
-	n, _ := os.Stdin.Read(buf[:])
-	line := string(buf[:n])
-	line = strings.TrimRight(line, "\r\n")
-	return line
+	scanner := bufio.NewScanner(os.Stdin)
+	if scanner.Scan() {
+		return strings.TrimRight(scanner.Text(), "\r\n")
+	}
+	return ""
 }
