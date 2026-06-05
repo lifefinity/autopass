@@ -7,7 +7,11 @@
 
 [中文文档](docs/README_zh.md)
 
-A CLI tool that automatically answers interactive prompts (passwords, PINs, passphrases) with encrypted secrets. Think `expect`, but simpler and with built-in secret management.
+**Encrypted expect in one binary** — auto-answer interactive prompts (passwords, PINs, passphrases) with secrets encrypted at rest.
+
+<p align="center">
+  <img src="demo.gif" alt="autopass demo" width="600">
+</p>
 
 ## Why autopass?
 
