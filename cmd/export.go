@@ -33,7 +33,7 @@ func runExport(cmd *cobra.Command, args []string) error {
 		clean[name] = p
 	}
 
-	raw, err := json.MarshalIndent(clean, "", "  ")
+	raw, err := json.MarshalIndent(clean, "", "  ") // #nosec G117 -- Secret field is intentionally empty in export
 	if err != nil {
 		return fmt.Errorf("marshaling profiles: %w", err)
 	}

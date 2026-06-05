@@ -119,7 +119,7 @@ func runProfileWithSteps(profileName string, runOpts profileRunOpts) error {
 	if exitCode == 0 {
 		afterCmds := append(profile.After, runOpts.after...)
 		for _, cmd := range afterCmds {
-			afterCmd := exec.Command("sh", "-c", cmd)
+			afterCmd := exec.Command("sh", "-c", cmd) // #nosec G204 -- user-provided post-exit command is by design
 			afterCmd.Stdin = os.Stdin
 			afterCmd.Stdout = os.Stdout
 			afterCmd.Stderr = os.Stderr
