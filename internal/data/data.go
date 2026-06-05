@@ -16,6 +16,10 @@ var reservedNames = map[string]bool{
 	"update":  true,
 	"list":    true,
 	"remove":  true,
+	"export":  true,
+	"import":  true,
+	"backup":  true,
+	"restore": true,
 	"version": true,
 	"help":    true,
 }
@@ -26,16 +30,20 @@ type Data struct {
 }
 
 type Profile struct {
-	Command  string    `json:"command"`
-	Patterns []Pattern `json:"patterns"`
-	Secret   string    `json:"secret,omitempty"`
-	Prompt   string    `json:"prompt,omitempty"`
-	Timeout  Duration  `json:"timeout"`
+	Command     string    `json:"command"`
+	Description string    `json:"description,omitempty"`
+	Patterns    []Pattern `json:"patterns"`
+	Secret      string    `json:"secret,omitempty"`
+	Prompt      string    `json:"prompt,omitempty"`
+	Timeout     Duration  `json:"timeout"`
+	Steps       []string  `json:"steps,omitempty"`
+	After       []string  `json:"after,omitempty"`
 }
 
 type Pattern struct {
-	Match  string `json:"match"`
-	Hidden bool   `json:"hidden"`
+	Match         string `json:"match"`
+	Hidden        bool   `json:"hidden"`
+	CaseSensitive bool   `json:"case_sensitive,omitempty"`
 }
 
 // Duration is a wrapper around time.Duration that supports JSON marshaling
@@ -118,9 +126,17 @@ func Save(path string, d *Data) error {
 	return nil
 }
 
+var validProfileName = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9._-]*$`)
+
 func (d *Data) AddProfile(name string, profile Profile) error {
 	if reservedNames[name] {
 		return fmt.Errorf("profile name %q conflicts with a subcommand", name)
+	}
+	if name == "" {
+		return fmt.Errorf("profile name must not be empty")
+	}
+	if !validProfileName.MatchString(name) {
+		return fmt.Errorf("profile name %q is invalid: must start with alphanumeric and contain only alphanumeric, dot, dash, or underscore", name)
 	}
 	if d.Profiles == nil {
 		d.Profiles = make(map[string]Profile)

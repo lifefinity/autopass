@@ -14,11 +14,15 @@ import (
 )
 
 var (
-	updateCommand string
-	updateMatch   string
-	updatePrompt  string
-	updateTimeout string
-	updateSecret  bool
+	updateCommand       string
+	updateMatch         []string
+	updatePrompt        string
+	updateTimeout       string
+	updateSecret        bool
+	updateCaseSensitive bool
+	updateSteps         []string
+	updateAfter         []string
+	updateDesc          string
 )
 
 var updateCmd = &cobra.Command{
@@ -35,20 +39,30 @@ Examples:
   autopass update mwinit -c "mwinit -s -o -f"
 
   # Update match pattern and timeout
-  autopass update mwinit -m "(?i)PIN:" -t 60s
+  autopass update mwinit -m "PIN:" -t 60s
 
   # Update multiple fields at once
-  autopass update myserver -c "ssh newuser@host" -m "(?i)password:" --secret`,
+  autopass update myserver -c "ssh newuser@host" -m "password:" --secret`,
 	Args: cobra.ExactArgs(1),
+	ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		if len(args) != 0 {
+			return nil, cobra.ShellCompDirectiveNoFileComp
+		}
+		return completeProfileNames(toComplete), cobra.ShellCompDirectiveNoFileComp
+	},
 	RunE: runUpdate,
 }
 
 func init() {
 	updateCmd.Flags().StringVarP(&updateCommand, "command", "c", "", "update the command")
-	updateCmd.Flags().StringVarP(&updateMatch, "match", "m", "", "update the prompt pattern (regex)")
+	updateCmd.Flags().StringVarP(&updateDesc, "desc", "d", "", "update the description")
+	updateCmd.Flags().StringArrayVarP(&updateMatch, "match", "m", nil, "update the prompt pattern (regex, can specify multiple)")
 	updateCmd.Flags().StringVarP(&updatePrompt, "prompt", "p", "", "update the shell prompt pattern for post-login steps")
 	updateCmd.Flags().StringVarP(&updateTimeout, "timeout", "t", "", "update the timeout (e.g. 30s, 1m)")
 	updateCmd.Flags().BoolVar(&updateSecret, "secret", false, "prompt for a new secret")
+	updateCmd.Flags().BoolVar(&updateCaseSensitive, "case-sensitive", false, "match pattern with exact case (default: case-insensitive)")
+	updateCmd.Flags().StringArrayVar(&updateSteps, "then", nil, "update post-login commands (replaces existing)")
+	updateCmd.Flags().StringArrayVar(&updateAfter, "after", nil, "update post-exit commands (replaces existing)")
 	rootCmd.AddCommand(updateCmd)
 }
 
@@ -72,9 +86,13 @@ func runUpdate(cmd *cobra.Command, args []string) error {
 
 	// Check if any flag was provided
 	anyChange := cmd.Flags().Changed("command") ||
+		cmd.Flags().Changed("desc") ||
 		cmd.Flags().Changed("match") ||
 		cmd.Flags().Changed("prompt") ||
 		cmd.Flags().Changed("timeout") ||
+		cmd.Flags().Changed("case-sensitive") ||
+		cmd.Flags().Changed("then") ||
+		cmd.Flags().Changed("after") ||
 		updateSecret
 
 	if !anyChange {
@@ -86,10 +104,25 @@ func runUpdate(cmd *cobra.Command, args []string) error {
 		profile.Command = updateCommand
 	}
 
+	// Update description
+	if cmd.Flags().Changed("desc") {
+		profile.Description = updateDesc
+	}
+
 	// Update match pattern
 	if cmd.Flags().Changed("match") {
-		profile.Patterns = []data.Pattern{
-			{Match: updateMatch, Hidden: true},
+		cs := updateCaseSensitive
+		if !cmd.Flags().Changed("case-sensitive") && len(profile.Patterns) > 0 {
+			cs = profile.Patterns[0].CaseSensitive
+		}
+		patterns := make([]data.Pattern, len(updateMatch))
+		for i, m := range updateMatch {
+			patterns[i] = data.Pattern{Match: m, Hidden: true, CaseSensitive: cs}
+		}
+		profile.Patterns = patterns
+	} else if cmd.Flags().Changed("case-sensitive") && len(profile.Patterns) > 0 {
+		for i := range profile.Patterns {
+			profile.Patterns[i].CaseSensitive = updateCaseSensitive
 		}
 	}
 
@@ -107,6 +140,16 @@ func runUpdate(cmd *cobra.Command, args []string) error {
 		profile.Timeout = data.Duration{Duration: timeout}
 	}
 
+	// Update steps
+	if cmd.Flags().Changed("then") {
+		profile.Steps = updateSteps
+	}
+
+	// Update after
+	if cmd.Flags().Changed("after") {
+		profile.After = updateAfter
+	}
+
 	// Update secret
 	if updateSecret {
 		key, keyErr := deriveKey()
@@ -120,6 +163,11 @@ func runUpdate(cmd *cobra.Command, args []string) error {
 		if readErr != nil {
 			return fmt.Errorf("reading secret: %w", readErr)
 		}
+		defer func() {
+			for i := range secret {
+				secret[i] = 0
+			}
+		}()
 
 		ciphertext, encErr := crypto.Encrypt(key, secret)
 		if encErr != nil {

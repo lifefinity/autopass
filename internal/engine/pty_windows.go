@@ -127,13 +127,17 @@ func startProcessWithPTY(hPC syscall.Handle, cmdLine string, pipeIn, pipeOut sys
 	siEx.Cb = uint32(unsafe.Sizeof(siEx))
 
 	var pi syscall.ProcessInformation
+	var envBlock *uint16
+	if len(opts.Env) > 0 {
+		envBlock = createEnvBlock(append(os.Environ(), opts.Env...))
+	}
 	createErr := syscall.CreateProcess(
 		nil,
 		cmdLinePtr,
 		nil, nil,
 		false,
-		_EXTENDED_STARTUPINFO_PRESENT,
-		nil, nil,
+		_EXTENDED_STARTUPINFO_PRESENT|syscall.CREATE_UNICODE_ENVIRONMENT,
+		envBlock, nil,
 		&siEx.StartupInfo,
 		&pi,
 	)
@@ -265,4 +269,15 @@ func buildCommandLine(args []string) string {
 		cmdLine += " " + arg
 	}
 	return cmdLine
+}
+
+func createEnvBlock(env []string) *uint16 {
+	// Environment block: "key=value\0key=value\0\0" in UTF-16
+	var block []uint16
+	for _, s := range env {
+		u := syscall.StringToUTF16(s)
+		block = append(block, u...)
+	}
+	block = append(block, 0) // double null terminator
+	return &block[0]
 }

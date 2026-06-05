@@ -10,11 +10,33 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-	Use:     "autopass",
-	Short:   "Automated interactive prompt responder",
-	Long:    "Wraps commands in a PTY, matches output patterns, and responds with decrypted secrets.",
+	Use:   "autopass",
+	Short: "Automated interactive prompt responder",
+	Long: `Wraps commands in a PTY, matches output patterns, and responds with decrypted secrets.
+
+Run a profile:
+  autopass <profile>              Run with auto-answering
+  autopass <profile> --then "cmd" Execute command after login
+  autopass <profile> --script f   Execute commands from file after login
+  autopass <profile> --prompt "x" Override shell prompt pattern
+  autopass <profile> -e K=V       Inject environment variable
+  autopass <profile> --after cmd  Run command in new shell after profile exits
+  autopass <profile> --quiet      Suppress terminal output
+
+Examples:
+  autopass mwinit                            # Auto-fill PIN for mwinit
+  autopass mydb --then "SELECT now();"       # Run SQL after connecting
+  autopass prod --script deploy.sh           # Run script after login
+  autopass mydb --then "\timing" --then "\q" # Chain multiple commands
+  autopass deploy -e HOST=prod.example.com   # Inject env var`,
 	Version: Version,
 	Args:    cobra.ArbitraryArgs,
+	ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		if len(args) != 0 {
+			return nil, cobra.ShellCompDirectiveNoFileComp
+		}
+		return completeProfileNames(toComplete), cobra.ShellCompDirectiveNoFileComp
+	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) == 0 {
 			return cmd.Help()
@@ -36,6 +58,10 @@ type profileRunOpts struct {
 	then       []string
 	scriptFile string
 	prompt     string
+	quiet      bool
+	dryRun     bool
+	env        []string
+	after      []string
 }
 
 func parseProfileArgs(args []string) (string, profileRunOpts) {
@@ -48,6 +74,13 @@ func parseProfileArgs(args []string) (string, profileRunOpts) {
 		case "--then":
 			if i+1 < len(args) {
 				opts.then = append(opts.then, args[i+1])
+				i += 2
+			} else {
+				i++
+			}
+		case "--after":
+			if i+1 < len(args) {
+				opts.after = append(opts.after, args[i+1])
 				i += 2
 			} else {
 				i++
@@ -66,6 +99,19 @@ func parseProfileArgs(args []string) (string, profileRunOpts) {
 			} else {
 				i++
 			}
+		case "--env", "-e":
+			if i+1 < len(args) {
+				opts.env = append(opts.env, args[i+1])
+				i += 2
+			} else {
+				i++
+			}
+		case "--quiet", "-q":
+			opts.quiet = true
+			i++
+		case "--dry-run":
+			opts.dryRun = true
+			i++
 		default:
 			i++
 		}
@@ -110,4 +156,22 @@ func readScriptFile(path string) ([]string, error) {
 		return nil, fmt.Errorf("reading script file: %w", err)
 	}
 	return lines, nil
+}
+
+func completeProfileNames(prefix string) []string {
+	d, err := loadData()
+	if err != nil {
+		return nil
+	}
+	names := d.ListProfiles()
+	if prefix == "" {
+		return names
+	}
+	var filtered []string
+	for _, name := range names {
+		if len(name) >= len(prefix) && name[:len(prefix)] == prefix {
+			filtered = append(filtered, name)
+		}
+	}
+	return filtered
 }

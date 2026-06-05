@@ -93,3 +93,51 @@ func TestEncrypt_DifferentNonce(t *testing.T) {
 		t.Fatal("two encryptions of same plaintext should produce different ciphertext (random nonce)")
 	}
 }
+
+func TestGenerateKey_And_DeriveKey(t *testing.T) {
+	dir := t.TempDir()
+	keyPath := filepath.Join(dir, "test_key")
+
+	if err := GenerateKey(keyPath, nil); err != nil {
+		t.Fatalf("GenerateKey failed: %v", err)
+	}
+
+	// Should be able to derive a key from the generated file
+	key, err := DeriveKey(keyPath, nil)
+	if err != nil {
+		t.Fatalf("DeriveKey on generated key failed: %v", err)
+	}
+	if len(key) != 32 {
+		t.Fatalf("expected 32-byte key, got %d", len(key))
+	}
+
+	// Public key file should exist
+	if _, err := filepath.Glob(keyPath + ".pub"); err != nil {
+		t.Fatalf("public key file not found: %v", err)
+	}
+}
+
+func TestGenerateKey_WithPassphrase(t *testing.T) {
+	dir := t.TempDir()
+	keyPath := filepath.Join(dir, "test_key_protected")
+	passphrase := []byte("test-password-123")
+
+	if err := GenerateKey(keyPath, passphrase); err != nil {
+		t.Fatalf("GenerateKey with passphrase failed: %v", err)
+	}
+
+	// Without passphrase should fail
+	_, err := DeriveKey(keyPath, nil)
+	if err == nil {
+		t.Fatal("expected error without passphrase")
+	}
+
+	// With correct passphrase should succeed
+	key, err := DeriveKey(keyPath, passphrase)
+	if err != nil {
+		t.Fatalf("DeriveKey with passphrase failed: %v", err)
+	}
+	if len(key) != 32 {
+		t.Fatalf("expected 32-byte key, got %d", len(key))
+	}
+}

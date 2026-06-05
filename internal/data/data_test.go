@@ -251,3 +251,44 @@ func TestListProfiles(t *testing.T) {
 		t.Fatalf("expected sorted order, got %v", names)
 	}
 }
+
+func TestAddProfile_InvalidNames(t *testing.T) {
+	d := &Data{Profiles: make(map[string]Profile)}
+
+	cases := []struct {
+		name    string
+		wantErr string
+	}{
+		{"", "must not be empty"},
+		{"has space", "is invalid"},
+		{"-startdash", "is invalid"},
+		{"bad;cmd", "is invalid"},
+		{"$(evil)", "is invalid"},
+		{".dotstart", "is invalid"},
+		{"_understart", "is invalid"},
+	}
+
+	for _, tc := range cases {
+		err := d.AddProfile(tc.name, Profile{Command: "echo"})
+		if err == nil {
+			t.Errorf("expected error for name %q, got nil", tc.name)
+			continue
+		}
+		if !contains(err.Error(), tc.wantErr) {
+			t.Errorf("name %q: expected error containing %q, got %q", tc.name, tc.wantErr, err.Error())
+		}
+	}
+}
+
+func contains(s, substr string) bool {
+	return len(s) >= len(substr) && (s == substr || len(s) > 0 && stringContains(s, substr))
+}
+
+func stringContains(s, sub string) bool {
+	for i := 0; i <= len(s)-len(sub); i++ {
+		if s[i:i+len(sub)] == sub {
+			return true
+		}
+	}
+	return false
+}
