@@ -80,7 +80,7 @@ func Load(path string) (*Data, error) {
 	}
 
 	var d Data
-	if err := json.Unmarshal(raw, &d); err != nil {
+	if err := json.Unmarshal(stripComments(raw), &d); err != nil {
 		return nil, fmt.Errorf("parsing data file: %w", err)
 	}
 
@@ -93,6 +93,40 @@ func Load(path string) (*Data, error) {
 	}
 
 	return &d, nil
+}
+
+// stripComments removes // line comments from JSONC content.
+// Respects strings: // inside "..." is not treated as a comment.
+func stripComments(data []byte) []byte {
+	var out []byte
+	inString := false
+	for i := 0; i < len(data); i++ {
+		if inString {
+			out = append(out, data[i])
+			if data[i] == '\\' && i+1 < len(data) {
+				i++
+				out = append(out, data[i])
+			} else if data[i] == '"' {
+				inString = false
+			}
+			continue
+		}
+		if data[i] == '"' {
+			inString = true
+			out = append(out, data[i])
+		} else if data[i] == '/' && i+1 < len(data) && data[i+1] == '/' {
+			// Skip until end of line
+			for i < len(data) && data[i] != '\n' {
+				i++
+			}
+			if i < len(data) {
+				out = append(out, '\n')
+			}
+		} else {
+			out = append(out, data[i])
+		}
+	}
+	return out
 }
 
 func validate(d *Data) error {
