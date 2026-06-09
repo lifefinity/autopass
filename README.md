@@ -223,6 +223,7 @@ autopass import profiles.json    # merge with existing (--force to overwrite)
 
 ## Documentation
 
+- [Examples](docs/examples.md) — complete cookbook for SSH, databases, CI, git, and more
 - [User Guide](docs/user-guide.md) — detailed usage, flags, troubleshooting
 - [Architecture](docs/architecture.md) — component design, data flow, security model
 - [Development](docs/development.md) — building, testing, contributing
