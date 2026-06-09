@@ -62,7 +62,7 @@ Prompts for command, pattern, and secret.
 ```bash
 autopass add -c "ssh deploy@prod-server" -m "password:" -d "Production server" prod
 autopass add -c "psql -h db.example.com -U admin mydb" -m "password" -p "=>\s*$" -d "Main database" mydb
-autopass add -c "mwinit -s -o" -m "PIN:" -d "Midway refresh" --after "date" mwinit
+autopass add -c "kinit admin@CORP.COM" -m "Password:" -d "Kerberos auth" --after "klist" krb
 ```
 
 ### Add Flags
@@ -84,7 +84,7 @@ autopass add -c "mwinit -s -o" -m "PIN:" -d "Midway refresh" --after "date" mwin
 |---|----------|-----------|
 | **When** | Inside the running session | After process exits (exit code 0) |
 | **Requires** | `-p` prompt pattern | Nothing |
-| **Use for** | psql, mysql, ssh shell | mwinit, kinit, one-shot commands |
+| **Use for** | psql, mysql, ssh shell | kinit, docker login, one-shot auth |
 | **Runs in** | The PTY session | A new `sh -c` shell |
 
 ### Example: PostgreSQL with built-in steps
@@ -96,12 +96,12 @@ autopass add -c "psql -h localhost -U admin mydb" \
   -d "Local PG with timing" mydb
 ```
 
-### Example: mwinit with post-exit command
+### Example: kinit with post-exit command
 
 ```bash
-autopass add -c "mwinit -s -o" -m "PIN:" \
+autopass add -c "kinit admin@CORP.COM" -m "Password:" \
   --after "date" --after "echo 'Midway refreshed'" \
-  -d "Midway auth" mwinit
+  -d "Kerberos auth" krb
 ```
 
 ## Running a Profile

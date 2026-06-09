@@ -141,6 +141,9 @@ func (d *Data) AddProfile(name string, profile Profile) error {
 	if d.Profiles == nil {
 		d.Profiles = make(map[string]Profile)
 	}
+	if _, exists := d.Profiles[name]; exists {
+		return fmt.Errorf("profile %q already exists (use 'autopass update %s' to modify)", name, name)
+	}
 	d.Profiles[name] = profile
 	return nil
 }

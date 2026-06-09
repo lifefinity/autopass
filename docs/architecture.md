@@ -37,7 +37,7 @@ autopass is a CLI tool that wraps interactive commands in a pseudo-terminal, wat
 ┌─────────────────────────────────────────────────────────┐
 │              Pseudo-Terminal (ConPTY / PTY)               │
 │                                                          │
-│  Child process (mwinit, ssh, psql, etc.)                 │
+│  Child process (kinit, ssh, psql, etc.)                 │
 └─────────────────────────────────────────────────────────┘
 ```
 
