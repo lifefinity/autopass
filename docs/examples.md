@@ -58,18 +58,58 @@ autopass mysql-prod     # connects to MySQL
 autopass oracle-prod    # connects to Oracle
 ```
 
-### Database with Post-Login Commands
+### --then vs --after
+
+Two different hooks for two different moments:
+
+| Flag | When | Use for |
+|------|------|---------|
+| `--then` | **Inside** the session, after password is filled | Run SQL, set config, execute commands in the shell |
+| `--after` | **After** the process exits | Verify result, notify, chain next tool |
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  autopass mydb --then "\timing on" --after "echo done"  │
+│                                                         │
+│  1. Launch: psql -h db -U admin                         │
+│  2. Auto-fill password when prompted                    │
+│  3. --then: type "\timing on" into psql session  ← inside│
+│  4. User interacts with psql...                         │
+│  5. User exits psql (\q or Ctrl-D)                      │
+│  6. --after: run "echo done" in parent shell     ← after│
+└─────────────────────────────────────────────────────────┘
+```
+
+### Database with --then (Post-Login Commands)
 
 ```bash
-# PostgreSQL: enable timing, set schema, run queries
+# Run SQL after login
+autopass mydb --then "SELECT now();" --then "\q"
+
+# Enable timing + set schema (saved in profile)
 autopass add -c "psql -h db.example.com -U admin mydb" -m "password" \
   -p "=>\s*$" --then "\timing on" --then "SET search_path TO app;" mydb
 
-# MySQL: run a script file after login
+# Run a script file
 autopass mydb --script queries.sql
 
-# Combined: post-login setup + script + exit
+# Combined
 autopass mydb --then "\timing on" --script queries.sql --then "\q"
+```
+
+### Kerberos with --after (Post-Exit Commands)
+
+```bash
+# Verify ticket was obtained after kinit exits
+autopass add -c "kinit admin@CORP.COM" -m "Password:" \
+  --after "klist" \
+  --after "echo 'Kerberos ticket refreshed'" \
+  krb
+
+# SSH + notify when disconnected
+autopass add -c "ssh deploy@prod" -m "password:" \
+  --after "echo 'Disconnected from prod at $(date)'" \
+  prod
 ```
 
 ## System Administration
@@ -149,17 +189,6 @@ autopass myserver --dry-run
 ```bash
 # No PTY output — just auto-fill and exit
 autopass mydb -q --script queries.sql > result.txt
-```
-
-### Post-Exit Commands
-
-Run commands after the main process exits (e.g., verify auth succeeded):
-
-```bash
-autopass add -c "kinit admin@CORP.COM" -m "Password:" \
-  --after "klist" \
-  --after "echo 'Kerberos ticket refreshed'" \
-  krb
 ```
 
 ### Timeout Control
