@@ -13,11 +13,11 @@ Type "# autopass - encrypted expect in one binary"
 Enter
 Sleep 1s
 
-Type "autopass add mwinit -c 'mwinit -s' -m 'PIN:'"
+Type "autopass add myserver -c 'ssh deploy@prod' -m 'password:'"
 Enter
 Sleep 500ms
 
-Type "Enter your secret PIN: "
+Type "Enter your secret: "
 Sleep 300ms
 Type "****"
 Enter
@@ -27,7 +27,7 @@ Type "# Now run it anytime - secret is encrypted at rest"
 Enter
 Sleep 800ms
 
-Type "autopass mwinit"
+Type "autopass myserver"
 Enter
 Sleep 2s
 
@@ -51,6 +51,6 @@ Type "# Dry-run to preview"
 Enter
 Sleep 500ms
 
-Type "autopass mwinit --dry-run"
+Type "autopass myserver --dry-run"
 Enter
 Sleep 2s

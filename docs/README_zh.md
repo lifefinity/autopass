@@ -88,7 +88,7 @@ autopass add -c "sudo apt upgrade -y" -m "password" -d "系统更新" apt-upgrad
 autopass add -c "kinit admin@EXAMPLE.COM" -m "password for" -d "Kerberos 认证" krb
 
 # Midway (Amazon)
-autopass add -c "mwinit -s -o" -m "PIN:" --after "date" -d "Midway 刷新" mwinit
+autopass add -c "kinit admin@CORP.COM" -m "Password:" --after "klist" -d "Kerberos 认证" krb
 ```
 
 ### 登录后执行命令 (--then)
@@ -111,8 +111,8 @@ autopass mydb --then "\timing on" --script queries.sql --then "\q"
 主进程正常退出后，在新 shell 中执行命令：
 
 ```bash
-# mwinit 完成后显示时间
-autopass mwinit --after "date"
+# kinit 完成后显示凭据
+autopass krb --after "klist"
 
 # SSH 退出后同步文件
 autopass prod --after "rsync -a ./dist/ server:/app/"
@@ -131,7 +131,7 @@ autopass update prod --secret                    # 更换密码
 autopass update prod -c "ssh newuser@host"       # 更换命令
 autopass update prod -d "新的描述"                # 更换描述
 autopass update mydb --then "\timing on"         # 设置登录后步骤
-autopass update mwinit --after "date"            # 设置退出后命令
+autopass update krb --after "klist"            # 设置退出后命令
 autopass update mysql-prod -m "password:" -t 60s # 更换匹配和超时
 ```
 
@@ -166,7 +166,7 @@ autopass mydb -q --then "SELECT 1;"           # 短写
 |---|----------|-----------|
 | **何时执行** | 在运行的会话内部 | 主进程退出后 |
 | **需要** | `-p` 指定 shell 提示符 | 无要求 |
-| **适用场景** | psql、mysql、ssh 交互式 shell | mwinit、kinit 等一次性命令 |
+| **适用场景** | psql、mysql、ssh 交互式 shell | kinit、docker login 等一次性命令 |
 | **执行环境** | PTY 会话内 | 新的 `sh -c` shell |
 
 ## 模式匹配

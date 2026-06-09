@@ -99,11 +99,11 @@ autopass add -c "sudo apt upgrade -y" -m "password" apt-upgrade
 # Kerberos
 autopass add -c "kinit admin@EXAMPLE.COM" -m "password for" krb
 
+# Oracle SQL*Plus
+autopass add -c "sqlplus admin@orcl" -m "password:" oracle-prod
+
 # Redis CLI (AUTH)
 autopass add -c "redis-cli -h cache.example.com" -m "password:" redis
-
-# FTP
-autopass add -c "ftp files.example.com" -m "password:" ftp-files
 ```
 
 ### Post-Login Commands
@@ -140,7 +140,7 @@ autopass update prod -d "Production deployment server"
 autopass update mydb --then "\timing on" --then "SET search_path TO app;"
 
 # Set post-exit commands
-autopass update mwinit --after "date" --after "echo done"
+autopass update krb --after "klist" --after "echo done"
 
 # Enable case-sensitive matching
 autopass update myserver --case-sensitive

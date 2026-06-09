@@ -9,28 +9,28 @@
   <!-- Terminal content -->
   <g fill="#cdd6f4">
     <text x="16" y="60" fill="#89b4fa">$</text>
-    <text x="30" y="60">autopass add mwinit -c "mwinit -s" -m "PIN:"</text>
-    <text x="16" y="82" fill="#a6e3a1">✓ Enter secret for mwinit: ****</text>
-    <text x="16" y="104" fill="#a6e3a1">✓ Profile "mwinit" saved (encrypted)</text>
+    <text x="30" y="60">autopass add myserver -c "ssh deploy@prod" -m "password:"</text>
+    <text x="16" y="82" fill="#a6e3a1">✓ Enter secret for myserver: ****</text>
+    <text x="16" y="104" fill="#a6e3a1">✓ Profile "myserver" saved (encrypted)</text>
 
     <text x="16" y="136" fill="#89b4fa">$</text>
-    <text x="30" y="136">autopass mwinit</text>
-    <text x="16" y="158" fill="#585b70">Launching: mwinit -s</text>
-    <text x="16" y="180" fill="#f9e2af">PIN: </text>
-    <text x="55" y="180" fill="#a6e3a1">••••  (auto-filled)</text>
-    <text x="16" y="202" fill="#a6e3a1">✓ Authentication successful</text>
+    <text x="30" y="136">autopass myserver</text>
+    <text x="16" y="158" fill="#585b70">Launching: ssh deploy@prod</text>
+    <text x="16" y="180" fill="#f9e2af">password: </text>
+    <text x="95" y="180" fill="#a6e3a1">••••  (auto-filled)</text>
+    <text x="16" y="202" fill="#a6e3a1">✓ Connected to prod</text>
 
     <text x="16" y="234" fill="#89b4fa">$</text>
     <text x="30" y="234">autopass list</text>
     <text x="16" y="258" fill="#585b70">  NAME      COMMAND         DESCRIPTION</text>
     <text x="16" y="276" fill="#585b70">  ────────  ──────────────  ───────────────</text>
-    <text x="16" y="294">  mwinit    mwinit -s       PIN:</text>
-    <text x="16" y="312">  prod      ssh deploy@srv  password:</text>
-    <text x="16" y="330">  mydb      psql -h db -U…  password</text>
+    <text x="16" y="294">  myserver  ssh deploy@srv  password:</text>
+    <text x="16" y="312">  mydb      psql -h db -U…  password</text>
+    <text x="16" y="330">  redis     redis-cli -h…   AUTH:</text>
 
     <text x="16" y="362" fill="#89b4fa">$</text>
-    <text x="30" y="362">autopass prod --dry-run</text>
-    <text x="16" y="384" fill="#585b70">Command: ssh deploy@srv</text>
+    <text x="30" y="362">autopass myserver --dry-run</text>
+    <text x="16" y="384" fill="#585b70">Command: ssh deploy@prod</text>
     <text x="16" y="402" fill="#585b70">Patterns: (?i)password:</text>
   </g>
 </svg>
