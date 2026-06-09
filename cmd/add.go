@@ -176,7 +176,7 @@ func runAdd(cmd *cobra.Command, args []string) error {
 		After:       addAfter,
 	}
 
-	if err := d.AddProfile(name, profile); err != nil {
+	if err := d.Profiles.AddProfile(name, profile); err != nil {
 		return err
 	}
 

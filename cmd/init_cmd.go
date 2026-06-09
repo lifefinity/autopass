@@ -70,8 +70,8 @@ func runInit(cmd *cobra.Command, args []string) error {
 		}
 
 		d := &data.Data{
-			KeyCommand: initKeyCommand,
-			Profiles:   make(map[string]data.Profile),
+			Config:   data.Config{KeyCommand: initKeyCommand},
+			Profiles: data.Profiles{Entries: make(map[string]data.Profile)},
 		}
 		if err := data.Save(dataFilePath, d); err != nil {
 			return fmt.Errorf("writing data file: %w", err)
@@ -131,8 +131,8 @@ func runInit(cmd *cobra.Command, args []string) error {
 	}
 
 	d := &data.Data{
-		KeyFile:   keyFile,
-		Profiles: make(map[string]data.Profile),
+		Config:   data.Config{KeyFile: keyFile},
+		Profiles: data.Profiles{Entries: make(map[string]data.Profile)},
 	}
 
 	if err := data.Save(dataFilePath, d); err != nil {

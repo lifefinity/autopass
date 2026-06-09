@@ -54,12 +54,12 @@ func deriveKey() ([]byte, error) {
 	}
 
 	// Priority: key_command > key_file
-	if d.KeyCommand != "" {
-		return deriveKeyFromCommand(d.KeyCommand)
+	if d.Config.KeyCommand != "" {
+		return deriveKeyFromCommand(d.Config.KeyCommand)
 	}
 
 	home, _ := os.UserHomeDir()
-	keyFilePath := d.KeyFile
+	keyFilePath := d.Config.KeyFile
 	if len(keyFilePath) > 2 && keyFilePath[:2] == "~/" {
 		keyFilePath = filepath.Join(home, keyFilePath[2:])
 	}

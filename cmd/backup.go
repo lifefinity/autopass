@@ -39,7 +39,7 @@ func runBackup(cmd *cobra.Command, args []string) error {
 	dataFile := filepath.Join(autopassDir, "data.json")
 
 	// Resolve key path
-	keyPath := d.KeyFile
+	keyPath := d.Config.KeyFile
 	if len(keyPath) > 2 && keyPath[:2] == "~/" {
 		keyPath = filepath.Join(home, keyPath[2:])
 	}

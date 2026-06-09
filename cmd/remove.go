@@ -38,7 +38,7 @@ func runRemove(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("loading data: %w", err)
 	}
 
-	if err := d.RemoveProfile(name); err != nil {
+	if err := d.Profiles.RemoveProfile(name); err != nil {
 		return err
 	}
 

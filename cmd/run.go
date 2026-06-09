@@ -19,7 +19,7 @@ func runProfileWithSteps(profileName string, runOpts profileRunOpts) error {
 		return err
 	}
 
-	profile, ok := d.Profiles[profileName]
+	profile, ok := d.Profiles.Entries[profileName]
 	if !ok {
 		return fmt.Errorf("profile %q not found", profileName)
 	}

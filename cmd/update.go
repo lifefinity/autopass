@@ -79,7 +79,7 @@ func runUpdate(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("loading data: %w", err)
 	}
 
-	profile, ok := d.Profiles[profileName]
+	profile, ok := d.Profiles.Entries[profileName]
 	if !ok {
 		return fmt.Errorf("profile %q not found", profileName)
 	}
@@ -176,7 +176,7 @@ func runUpdate(cmd *cobra.Command, args []string) error {
 		profile.Secret = base64.StdEncoding.EncodeToString(ciphertext)
 	}
 
-	d.Profiles[profileName] = profile
+	d.Profiles.Entries[profileName] = profile
 
 	if err := data.Save(path, d); err != nil {
 		return fmt.Errorf("saving data: %w", err)

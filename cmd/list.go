@@ -23,7 +23,7 @@ func runList(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	names := d.ListProfiles()
+	names := d.Profiles.ListProfiles()
 	if len(names) == 0 {
 		fmt.Println("No profiles configured.")
 		fmt.Println()
@@ -33,7 +33,7 @@ func runList(cmd *cobra.Command, args []string) error {
 
 	// Calculate column widths
 	maxName, maxCmd := len("NAME"), len("COMMAND")
-	for name, profile := range d.Profiles {
+	for name, profile := range d.Profiles.Entries {
 		if len(name) > maxName {
 			maxName = len(name)
 		}
@@ -46,7 +46,7 @@ func runList(cmd *cobra.Command, args []string) error {
 	fmt.Println(header)
 	fmt.Println("  " + strings.Repeat("-", len(header)-2))
 	for _, name := range names {
-		profile := d.Profiles[name]
+		profile := d.Profiles.Entries[name]
 		desc := profile.Description
 		if desc == "" {
 			// Fallback: show matched patterns

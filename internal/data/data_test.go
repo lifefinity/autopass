@@ -13,11 +13,11 @@ func TestLoad_NonExistentFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load should not error on nonexistent file: %v", err)
 	}
-	if d.Profiles == nil {
+	if d.Profiles.Entries == nil {
 		t.Fatal("Profiles map should be initialized")
 	}
-	if len(d.Profiles) != 0 {
-		t.Fatalf("expected empty profiles, got %d", len(d.Profiles))
+	if len(d.Profiles.Entries) != 0 {
+		t.Fatalf("expected empty profiles, got %d", len(d.Profiles.Entries))
 	}
 }
 
@@ -46,13 +46,13 @@ func TestLoad_ValidFile(t *testing.T) {
 		t.Fatalf("Load failed: %v", err)
 	}
 
-	if d.KeyFile != "/home/user/.ssh/id_ed25519" {
-		t.Fatalf("unexpected key_file: %s", d.KeyFile)
+	if d.Config.KeyFile != "/home/user/.ssh/id_ed25519" {
+		t.Fatalf("unexpected key_file: %s", d.Config.KeyFile)
 	}
-	if len(d.Profiles) != 1 {
-		t.Fatalf("expected 1 profile, got %d", len(d.Profiles))
+	if len(d.Profiles.Entries) != 1 {
+		t.Fatalf("expected 1 profile, got %d", len(d.Profiles.Entries))
 	}
-	p := d.Profiles["mwinit"]
+	p := d.Profiles.Entries["mwinit"]
 	if p.Command != "mwinit -s -o" {
 		t.Fatalf("unexpected command: %s", p.Command)
 	}
@@ -124,15 +124,15 @@ func TestSave_And_Load(t *testing.T) {
 	path := filepath.Join(dir, "data.json")
 
 	d := &Data{
-		KeyFile: "/path/to/key",
-		Profiles: map[string]Profile{
+		Config:   Config{KeyFile: "/path/to/key"},
+		Profiles: Profiles{Entries: map[string]Profile{
 			"test": {
 				Command:  "echo hello",
 				Patterns: []Pattern{{Match: "(?i)prompt:", Hidden: true}},
 				Secret:   "encrypted-base64",
 				Timeout:  Duration{30 * time.Second},
 			},
-		},
+		}},
 	}
 
 	if err := Save(path, d); err != nil {
@@ -144,13 +144,13 @@ func TestSave_And_Load(t *testing.T) {
 		t.Fatalf("Load after Save failed: %v", err)
 	}
 
-	if loaded.KeyFile != d.KeyFile {
-		t.Fatalf("KeyFile mismatch: %s vs %s", loaded.KeyFile, d.KeyFile)
+	if loaded.Config.KeyFile != d.Config.KeyFile {
+		t.Fatalf("KeyFile mismatch: %s vs %s", loaded.Config.KeyFile, d.Config.KeyFile)
 	}
-	if len(loaded.Profiles) != 1 {
-		t.Fatalf("expected 1 profile, got %d", len(loaded.Profiles))
+	if len(loaded.Profiles.Entries) != 1 {
+		t.Fatalf("expected 1 profile, got %d", len(loaded.Profiles.Entries))
 	}
-	p := loaded.Profiles["test"]
+	p := loaded.Profiles.Entries["test"]
 	if p.Command != "echo hello" {
 		t.Fatalf("Command mismatch: %s", p.Command)
 	}
@@ -167,7 +167,7 @@ func TestSave_FilePermissions(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "data.json")
 
-	d := &Data{KeyFile: "/key", Profiles: map[string]Profile{}}
+	d := &Data{Config: Config{KeyFile: "/key"}, Profiles: Profiles{Entries: make(map[string]Profile)}}
 	if err := Save(path, d); err != nil {
 		t.Fatalf("Save failed: %v", err)
 	}
@@ -183,7 +183,7 @@ func TestSave_FilePermissions(t *testing.T) {
 }
 
 func TestAddProfile(t *testing.T) {
-	d := &Data{Profiles: make(map[string]Profile)}
+	d := &Data{Profiles: Profiles{Entries: make(map[string]Profile)}}
 
 	err := d.AddProfile("myprofile", Profile{
 		Command:  "ssh host",
@@ -195,13 +195,13 @@ func TestAddProfile(t *testing.T) {
 		t.Fatalf("AddProfile failed: %v", err)
 	}
 
-	if _, ok := d.Profiles["myprofile"]; !ok {
+	if _, ok := d.Profiles.Entries["myprofile"]; !ok {
 		t.Fatal("profile not added")
 	}
 }
 
 func TestAddProfile_ReservedName(t *testing.T) {
-	d := &Data{Profiles: make(map[string]Profile)}
+	d := &Data{Profiles: Profiles{Entries: make(map[string]Profile)}}
 
 	err := d.AddProfile("init", Profile{Command: "x"})
 	if err == nil {
@@ -210,25 +210,25 @@ func TestAddProfile_ReservedName(t *testing.T) {
 }
 
 func TestRemoveProfile(t *testing.T) {
-	d := &Data{Profiles: map[string]Profile{
+	d := &Data{Profiles: Profiles{Entries: map[string]Profile{
 		"one": {Command: "echo one"},
 		"two": {Command: "echo two"},
-	}}
+	}}}
 
 	err := d.RemoveProfile("one")
 	if err != nil {
 		t.Fatalf("RemoveProfile failed: %v", err)
 	}
-	if _, ok := d.Profiles["one"]; ok {
+	if _, ok := d.Profiles.Entries["one"]; ok {
 		t.Fatal("profile should be removed")
 	}
-	if len(d.Profiles) != 1 {
-		t.Fatalf("expected 1 profile remaining, got %d", len(d.Profiles))
+	if len(d.Profiles.Entries) != 1 {
+		t.Fatalf("expected 1 profile remaining, got %d", len(d.Profiles.Entries))
 	}
 }
 
 func TestRemoveProfile_NotFound(t *testing.T) {
-	d := &Data{Profiles: make(map[string]Profile)}
+	d := &Data{Profiles: Profiles{Entries: make(map[string]Profile)}}
 
 	err := d.RemoveProfile("ghost")
 	if err == nil {
@@ -237,11 +237,11 @@ func TestRemoveProfile_NotFound(t *testing.T) {
 }
 
 func TestListProfiles(t *testing.T) {
-	d := &Data{Profiles: map[string]Profile{
+	d := &Data{Profiles: Profiles{Entries: map[string]Profile{
 		"beta":  {Command: "b"},
 		"alpha": {Command: "a"},
 		"gamma": {Command: "g"},
-	}}
+	}}}
 
 	names := d.ListProfiles()
 	if len(names) != 3 {
@@ -253,7 +253,7 @@ func TestListProfiles(t *testing.T) {
 }
 
 func TestAddProfile_InvalidNames(t *testing.T) {
-	d := &Data{Profiles: make(map[string]Profile)}
+	d := &Data{Profiles: Profiles{Entries: make(map[string]Profile)}}
 
 	cases := []struct {
 		name    string
