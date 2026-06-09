@@ -53,10 +53,16 @@ func runInit(cmd *cobra.Command, args []string) error {
 	}
 
 	autopassDir := filepath.Join(home, ".autopass")
-	dataFilePath := filepath.Join(autopassDir, "data.json")
+	cfgPath := filepath.Join(autopassDir, "config.json")
 
-	if _, err := os.Stat(dataFilePath); err == nil {
-		fmt.Println("autopass is already initialized. Data at:", dataFilePath)
+	if _, err := os.Stat(cfgPath); err == nil {
+		fmt.Println("autopass is already initialized. Config at:", cfgPath)
+		return nil
+	}
+	// Also check legacy
+	legacyPath := filepath.Join(autopassDir, "data.json")
+	if _, err := os.Stat(legacyPath); err == nil {
+		fmt.Println("autopass is already initialized (legacy format). Data at:", legacyPath)
 		return nil
 	}
 
@@ -73,11 +79,11 @@ func runInit(cmd *cobra.Command, args []string) error {
 			Config:   data.Config{KeyCommand: initKeyCommand},
 			Profiles: data.Profiles{Entries: make(map[string]data.Profile)},
 		}
-		if err := data.Save(dataFilePath, d); err != nil {
-			return fmt.Errorf("writing data file: %w", err)
+		if err := saveData(d); err != nil {
+			return fmt.Errorf("saving config: %w", err)
 		}
 
-		fmt.Println("Initialized with key-command. Data at:", dataFilePath)
+		fmt.Println("Initialized with key-command. Config at:", cfgPath)
 		fmt.Println("Next: run 'autopass add <name>' to store a secret.")
 		return nil
 	}
@@ -135,11 +141,11 @@ func runInit(cmd *cobra.Command, args []string) error {
 		Profiles: data.Profiles{Entries: make(map[string]data.Profile)},
 	}
 
-	if err := data.Save(dataFilePath, d); err != nil {
-		return fmt.Errorf("writing data file: %w", err)
+	if err := saveData(d); err != nil {
+		return fmt.Errorf("saving config: %w", err)
 	}
 
-	fmt.Println("Initialized. Data at:", dataFilePath)
+	fmt.Println("Initialized. Config at:", cfgPath)
 	fmt.Println("Next: run 'autopass add <name>' to store a secret.")
 	return nil
 }

@@ -10,7 +10,6 @@ import (
 	"golang.org/x/term"
 
 	"github.com/lifefinity/autopass/internal/crypto"
-	"github.com/lifefinity/autopass/internal/data"
 )
 
 var changeKeyCmd = &cobra.Command{
@@ -40,14 +39,10 @@ func runChangeKey(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("new key not found: %w", err)
 	}
 
-	path, err := dataPath()
+
+	d, err := loadData()
 	if err != nil {
 		return err
-	}
-
-	d, err := data.Load(path)
-	if err != nil {
-		return fmt.Errorf("loading data: %w", err)
 	}
 
 	// Derive old key
@@ -102,7 +97,7 @@ func runChangeKey(cmd *cobra.Command, args []string) error {
 		d.Config.KeyFile = absPath
 	}
 
-	if err := data.Save(path, d); err != nil {
+	if err := saveData(d); err != nil {
 		return fmt.Errorf("saving data: %w", err)
 	}
 

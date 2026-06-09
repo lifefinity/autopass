@@ -5,7 +5,6 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/lifefinity/autopass/internal/data"
 )
 
 var removeCmd = &cobra.Command{
@@ -28,21 +27,17 @@ func init() {
 func runRemove(cmd *cobra.Command, args []string) error {
 	name := args[0]
 
-	path, err := dataPath()
+
+	d, err := loadData()
 	if err != nil {
 		return err
-	}
-
-	d, err := data.Load(path)
-	if err != nil {
-		return fmt.Errorf("loading data: %w", err)
 	}
 
 	if err := d.Profiles.RemoveProfile(name); err != nil {
 		return err
 	}
 
-	if err := data.Save(path, d); err != nil {
+	if err := saveData(d); err != nil {
 		return fmt.Errorf("saving data: %w", err)
 	}
 

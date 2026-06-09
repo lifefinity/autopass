@@ -150,14 +150,10 @@ func runAdd(cmd *cobra.Command, args []string) error {
 		timeout = 30 * time.Second
 	}
 
-	path, err := dataPath()
+
+	d, err := loadData()
 	if err != nil {
 		return err
-	}
-
-	d, err := data.Load(path)
-	if err != nil {
-		return fmt.Errorf("loading data: %w", err)
 	}
 
 	patterns := make([]data.Pattern, len(matches))
@@ -180,7 +176,7 @@ func runAdd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if err := data.Save(path, d); err != nil {
+	if err := saveData(d); err != nil {
 		return fmt.Errorf("saving data: %w", err)
 	}
 

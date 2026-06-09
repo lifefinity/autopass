@@ -69,14 +69,10 @@ func init() {
 func runUpdate(cmd *cobra.Command, args []string) error {
 	profileName := args[0]
 
-	path, err := dataPath()
+
+	d, err := loadData()
 	if err != nil {
 		return err
-	}
-
-	d, err := data.Load(path)
-	if err != nil {
-		return fmt.Errorf("loading data: %w", err)
 	}
 
 	profile, ok := d.Profiles.Entries[profileName]
@@ -178,7 +174,7 @@ func runUpdate(cmd *cobra.Command, args []string) error {
 
 	d.Profiles.Entries[profileName] = profile
 
-	if err := data.Save(path, d); err != nil {
+	if err := saveData(d); err != nil {
 		return fmt.Errorf("saving data: %w", err)
 	}
 

@@ -49,11 +49,7 @@ func runImport(cmd *cobra.Command, args []string) error {
 		added++
 	}
 
-	path, err := dataPath()
-	if err != nil {
-		return err
-	}
-	if err := data.Save(path, d); err != nil {
+	if err := saveData(d); err != nil {
 		return err
 	}
 

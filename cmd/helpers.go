@@ -14,37 +14,62 @@ import (
 )
 
 func dataPath() (string, error) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", fmt.Errorf("getting home directory: %w", err)
-	}
-	return filepath.Join(home, ".autopass", "data.json"), nil
+	return data.ProfilesPath()
+}
+
+func configPath() (string, error) {
+	return data.ConfigPath()
 }
 
 func loadData() (*data.Data, error) {
-	path, err := dataPath()
+	cfgPath, err := configPath()
+	if err != nil {
+		return nil, err
+	}
+	profPath, err := dataPath()
 	if err != nil {
 		return nil, err
 	}
 
-	d, err := data.Load(path)
-	if err != nil {
-		return nil, fmt.Errorf("loading data: %w", err)
-	}
-
-	// If data.json doesn't exist on disk, auto-initialize
-	if _, statErr := os.Stat(path); os.IsNotExist(statErr) {
+	// Check if initialized (config.json exists)
+	if _, statErr := os.Stat(cfgPath); os.IsNotExist(statErr) {
+		// Try legacy data.json
+		dir, _ := data.Dir()
+		legacyPath := filepath.Join(dir, "data.json")
+		if _, legErr := os.Stat(legacyPath); legErr == nil {
+			return data.Load(legacyPath)
+		}
 		fmt.Println("autopass is not initialized. Running setup now...")
 		if initErr := runInit(nil, nil); initErr != nil {
 			return nil, fmt.Errorf("auto-initialization failed: %w", initErr)
 		}
-		d, err = data.Load(path)
-		if err != nil {
-			return nil, fmt.Errorf("loading data after init: %w", err)
-		}
 	}
 
-	return d, nil
+	cfg, err := data.LoadConfig(cfgPath)
+	if err != nil {
+		return nil, err
+	}
+	prof, err := data.LoadProfiles(profPath)
+	if err != nil {
+		return nil, err
+	}
+
+	return &data.Data{Config: *cfg, Profiles: *prof}, nil
+}
+
+func saveData(d *data.Data) error {
+	cfgPath, err := configPath()
+	if err != nil {
+		return err
+	}
+	profPath, err := dataPath()
+	if err != nil {
+		return err
+	}
+	if err := data.SaveConfig(cfgPath, &d.Config); err != nil {
+		return err
+	}
+	return data.SaveProfiles(profPath, &d.Profiles)
 }
 
 func deriveKey() ([]byte, error) {
