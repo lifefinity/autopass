@@ -43,7 +43,7 @@ func runProfileWithSteps(profileName string, runOpts profileRunOpts) error {
 			return fmt.Errorf("decoding secret: %w", err)
 		}
 
-		plaintext, err := crypto.Decrypt(key, ciphertext)
+		plaintext, err := crypto.Decrypt(key, ciphertext, []byte(profileName))
 		if err != nil {
 			return fmt.Errorf("decrypting secret: %w", err)
 		}

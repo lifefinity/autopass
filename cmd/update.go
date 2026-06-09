@@ -165,7 +165,7 @@ func runUpdate(cmd *cobra.Command, args []string) error {
 			}
 		}()
 
-		ciphertext, encErr := crypto.Encrypt(key, secret)
+		ciphertext, encErr := crypto.Encrypt(key, secret, []byte(profileName))
 		if encErr != nil {
 			return fmt.Errorf("encrypting secret: %w", encErr)
 		}

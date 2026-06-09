@@ -139,7 +139,7 @@ func runAdd(cmd *cobra.Command, args []string) error {
 		}
 	}()
 
-	ciphertext, err := crypto.Encrypt(key, secret)
+	ciphertext, err := crypto.Encrypt(key, secret, []byte(name))
 	if err != nil {
 		return fmt.Errorf("encrypting secret: %w", err)
 	}

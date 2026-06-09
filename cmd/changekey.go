@@ -73,12 +73,12 @@ func runChangeKey(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("decoding secret for %q: %w", name, err)
 		}
 
-		plaintext, err := crypto.Decrypt(oldKey, ciphertext)
+		plaintext, err := crypto.Decrypt(oldKey, ciphertext, []byte(name))
 		if err != nil {
 			return fmt.Errorf("decrypting secret for %q: %w", name, err)
 		}
 
-		newCiphertext, err := crypto.Encrypt(newKey, plaintext)
+		newCiphertext, err := crypto.Encrypt(newKey, plaintext, []byte(name))
 		if err != nil {
 			return fmt.Errorf("re-encrypting secret for %q: %w", name, err)
 		}

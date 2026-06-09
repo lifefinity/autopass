@@ -50,7 +50,7 @@ func deriveFromRaw(rawBytes []byte) ([]byte, error) {
 	return derivedKey, nil
 }
 
-func Encrypt(key, plaintext []byte) ([]byte, error) {
+func Encrypt(key, plaintext, aad []byte) ([]byte, error) {
 	block, err := aes.NewCipher(key)
 	if err != nil {
 		return nil, fmt.Errorf("creating AES cipher: %w", err)
@@ -66,11 +66,11 @@ func Encrypt(key, plaintext []byte) ([]byte, error) {
 		return nil, fmt.Errorf("generating nonce: %w", err)
 	}
 
-	ciphertext := gcm.Seal(nonce, nonce, plaintext, nil)
+	ciphertext := gcm.Seal(nonce, nonce, plaintext, aad)
 	return ciphertext, nil
 }
 
-func Decrypt(key, ciphertext []byte) ([]byte, error) {
+func Decrypt(key, ciphertext, aad []byte) ([]byte, error) {
 	block, err := aes.NewCipher(key)
 	if err != nil {
 		return nil, fmt.Errorf("creating AES cipher: %w", err)
@@ -87,7 +87,7 @@ func Decrypt(key, ciphertext []byte) ([]byte, error) {
 	}
 
 	nonce, ciphertextBody := ciphertext[:nonceSize], ciphertext[nonceSize:]
-	plaintext, err := gcm.Open(nil, nonce, ciphertextBody, nil)
+	plaintext, err := gcm.Open(nil, nonce, ciphertextBody, aad)
 	if err != nil {
 		return nil, fmt.Errorf("decrypting: %w", err)
 	}
