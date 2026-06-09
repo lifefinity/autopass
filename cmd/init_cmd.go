@@ -60,7 +60,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	var sshKey string
+	var keyFile string
 
 	if initKeyCommand != "" {
 		// Verify the command works
@@ -84,15 +84,15 @@ func runInit(cmd *cobra.Command, args []string) error {
 
 	if initKey != "" {
 		// User specified a key path
-		sshKey = initKey
-		fmt.Printf("Using specified key: %s\n", sshKey)
+		keyFile = initKey
+		fmt.Printf("Using specified key: %s\n", keyFile)
 	} else {
-		sshKey = findSSHKey(home)
+		keyFile = findKeyFile(home)
 	}
 
-	if sshKey == "" {
+	if keyFile == "" {
 		// No SSH key found — generate a dedicated autopass key
-		sshKey = filepath.Join(autopassDir, "autopass_key")
+		keyFile = filepath.Join(autopassDir, "autopass_key")
 
 		var passphrase []byte
 		if !initNoPassphrase {
@@ -103,19 +103,19 @@ func runInit(cmd *cobra.Command, args []string) error {
 		}
 
 		fmt.Println("Generating autopass encryption key...")
-		if err := crypto.GenerateKey(sshKey, passphrase); err != nil {
+		if err := crypto.GenerateKey(keyFile, passphrase); err != nil {
 			return fmt.Errorf("generating key: %w", err)
 		}
-		fmt.Printf("Created: %s\n", sshKey)
+		fmt.Printf("Created: %s\n", keyFile)
 		if len(passphrase) == 0 {
 			fmt.Println("⚠️  Key is unprotected (no passphrase). OK for full-disk encrypted machines.")
 		}
 	} else {
-		fmt.Printf("Using SSH key: %s\n", sshKey)
+		fmt.Printf("Using key file: %s\n", keyFile)
 	}
 
 	// Verify we can read the key (may need passphrase)
-	_, err = crypto.DeriveKey(sshKey, nil)
+	_, err = crypto.DeriveKey(keyFile, nil)
 	if err != nil {
 		fmt.Print("Enter SSH key passphrase: ")
 		passphrase, readErr := term.ReadPassword(int(os.Stdin.Fd())) // #nosec G115
@@ -124,14 +124,14 @@ func runInit(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("reading passphrase: %w", readErr)
 		}
 
-		_, err = crypto.DeriveKey(sshKey, passphrase)
+		_, err = crypto.DeriveKey(keyFile, passphrase)
 		if err != nil {
 			return fmt.Errorf("cannot derive key from SSH key: %w", err)
 		}
 	}
 
 	d := &data.Data{
-		SSHKey:   sshKey,
+		KeyFile:   keyFile,
 		Profiles: make(map[string]data.Profile),
 	}
 
@@ -176,7 +176,7 @@ func promptNewPassphrase() ([]byte, error) {
 	return p1, nil
 }
 
-func findSSHKey(home string) string {
+func findKeyFile(home string) string {
 	sshDir := filepath.Join(home, ".ssh")
 	candidates := []string{"id_ed25519", "id_rsa", "id_ecdsa"}
 

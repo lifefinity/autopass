@@ -20,7 +20,7 @@ func setupTestData(t *testing.T) (string, func()) {
 	}
 
 	d := &data.Data{
-		SSHKey: filepath.Join(dir, "fake_key"),
+		KeyFile: filepath.Join(dir, "fake_key"),
 		Profiles: map[string]data.Profile{
 			"myserver": {
 				Command:     "ssh user@host",

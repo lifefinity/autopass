@@ -21,8 +21,8 @@ var (
 	hkdfInfo = []byte("autopass-v1")
 )
 
-func DeriveKey(sshKeyPath string, passphrase []byte) ([]byte, error) {
-	keyData, err := os.ReadFile(sshKeyPath) // #nosec G304 -- path is from user config
+func DeriveKey(keyFilePath string, passphrase []byte) ([]byte, error) {
+	keyData, err := os.ReadFile(keyFilePath) // #nosec G304 -- path is from user config
 	if err != nil {
 		return nil, fmt.Errorf("reading SSH key: %w", err)
 	}

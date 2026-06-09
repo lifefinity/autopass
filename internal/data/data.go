@@ -25,7 +25,7 @@ var reservedNames = map[string]bool{
 }
 
 type Data struct {
-	SSHKey     string             `json:"ssh_key"`
+	KeyFile     string             `json:"key_file"`
 	KeyCommand string             `json:"key_command,omitempty"`
 	Profiles   map[string]Profile `json:"profiles"`
 }

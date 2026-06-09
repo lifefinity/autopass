@@ -25,7 +25,7 @@ func TestLoad_ValidFile(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "data.json")
 	content := `{
-  "ssh_key": "/home/user/.ssh/id_ed25519",
+  "key_file": "/home/user/.ssh/id_ed25519",
   "profiles": {
     "mwinit": {
       "command": "mwinit -s -o",
@@ -46,8 +46,8 @@ func TestLoad_ValidFile(t *testing.T) {
 		t.Fatalf("Load failed: %v", err)
 	}
 
-	if d.SSHKey != "/home/user/.ssh/id_ed25519" {
-		t.Fatalf("unexpected ssh_key: %s", d.SSHKey)
+	if d.KeyFile != "/home/user/.ssh/id_ed25519" {
+		t.Fatalf("unexpected key_file: %s", d.KeyFile)
 	}
 	if len(d.Profiles) != 1 {
 		t.Fatalf("expected 1 profile, got %d", len(d.Profiles))
@@ -77,7 +77,7 @@ func TestLoad_InvalidRegex(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "data.json")
 	content := `{
-  "ssh_key": "/home/user/.ssh/id_ed25519",
+  "key_file": "/home/user/.ssh/id_ed25519",
   "profiles": {
     "bad": {
       "command": "echo",
@@ -100,7 +100,7 @@ func TestLoad_ReservedName(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "data.json")
 	content := `{
-  "ssh_key": "/home/user/.ssh/id_ed25519",
+  "key_file": "/home/user/.ssh/id_ed25519",
   "profiles": {
     "init": {
       "command": "something",
@@ -124,7 +124,7 @@ func TestSave_And_Load(t *testing.T) {
 	path := filepath.Join(dir, "data.json")
 
 	d := &Data{
-		SSHKey: "/path/to/key",
+		KeyFile: "/path/to/key",
 		Profiles: map[string]Profile{
 			"test": {
 				Command:  "echo hello",
@@ -144,8 +144,8 @@ func TestSave_And_Load(t *testing.T) {
 		t.Fatalf("Load after Save failed: %v", err)
 	}
 
-	if loaded.SSHKey != d.SSHKey {
-		t.Fatalf("SSHKey mismatch: %s vs %s", loaded.SSHKey, d.SSHKey)
+	if loaded.KeyFile != d.KeyFile {
+		t.Fatalf("KeyFile mismatch: %s vs %s", loaded.KeyFile, d.KeyFile)
 	}
 	if len(loaded.Profiles) != 1 {
 		t.Fatalf("expected 1 profile, got %d", len(loaded.Profiles))
@@ -167,7 +167,7 @@ func TestSave_FilePermissions(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "data.json")
 
-	d := &Data{SSHKey: "/key", Profiles: map[string]Profile{}}
+	d := &Data{KeyFile: "/key", Profiles: map[string]Profile{}}
 	if err := Save(path, d); err != nil {
 		t.Fatalf("Save failed: %v", err)
 	}

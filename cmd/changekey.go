@@ -14,7 +14,7 @@ import (
 )
 
 var changeKeyCmd = &cobra.Command{
-	Use:   "change-key <new-ssh-key-path>",
+	Use:   "change-key <new-key-path>",
 	Short: "Switch to a new SSH key for encryption",
 	Long: `Re-encrypt all secrets with a new SSH key.
 
@@ -51,8 +51,8 @@ func runChangeKey(cmd *cobra.Command, args []string) error {
 	}
 
 	// Derive old key
-	fmt.Printf("Enter passphrase for current key (%s): ", d.SSHKey)
-	oldKey, err := deriveKeyFromPath(d.SSHKey)
+	fmt.Printf("Enter passphrase for current key file (%s): ", d.KeyFile)
+	oldKey, err := deriveKeyFromPath(d.KeyFile)
 	if err != nil {
 		return fmt.Errorf("deriving current key: %w", err)
 	}
@@ -97,9 +97,9 @@ func runChangeKey(cmd *cobra.Command, args []string) error {
 	home, _ := os.UserHomeDir()
 	absPath, _ := filepath.Abs(newKeyPath)
 	if rel, err := filepath.Rel(home, absPath); err == nil && len(rel) > 0 && rel[0] != '.' {
-		d.SSHKey = "~/" + rel
+		d.KeyFile = "~/" + rel
 	} else {
-		d.SSHKey = absPath
+		d.KeyFile = absPath
 	}
 
 	if err := data.Save(path, d); err != nil {
@@ -107,7 +107,7 @@ func runChangeKey(cmd *cobra.Command, args []string) error {
 	}
 
 	fmt.Printf("✓ Re-encrypted %d profile(s) with new key\n", count)
-	fmt.Printf("  Key: %s\n", d.SSHKey)
+	fmt.Printf("  Key: %s\n", d.KeyFile)
 	return nil
 }
 

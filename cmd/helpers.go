@@ -53,18 +53,18 @@ func deriveKey() ([]byte, error) {
 		return nil, err
 	}
 
-	// Priority: key_command > ssh_key file
+	// Priority: key_command > key_file
 	if d.KeyCommand != "" {
 		return deriveKeyFromCommand(d.KeyCommand)
 	}
 
 	home, _ := os.UserHomeDir()
-	sshKeyPath := d.SSHKey
-	if len(sshKeyPath) > 2 && sshKeyPath[:2] == "~/" {
-		sshKeyPath = filepath.Join(home, sshKeyPath[2:])
+	keyFilePath := d.KeyFile
+	if len(keyFilePath) > 2 && keyFilePath[:2] == "~/" {
+		keyFilePath = filepath.Join(home, keyFilePath[2:])
 	}
 
-	key, err := crypto.DeriveKey(sshKeyPath, nil)
+	key, err := crypto.DeriveKey(keyFilePath, nil)
 	if err != nil {
 		fmt.Print("Enter SSH key passphrase: ")
 		passphrase, readErr := term.ReadPassword(int(os.Stdin.Fd())) // #nosec G115
@@ -72,7 +72,7 @@ func deriveKey() ([]byte, error) {
 		if readErr != nil {
 			return nil, fmt.Errorf("reading passphrase: %w", readErr)
 		}
-		key, err = crypto.DeriveKey(sshKeyPath, passphrase)
+		key, err = crypto.DeriveKey(keyFilePath, passphrase)
 		if err != nil {
 			return nil, fmt.Errorf("deriving key: %w", err)
 		}
