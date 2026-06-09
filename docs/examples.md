@@ -37,8 +37,12 @@ autopass add -c "ssh deploy@prod-server" -m "password:" prod
 autopass add -c "ssh -p 2222 admin@bastion.example.com" -m "password:" bastion
 autopass add -c "ssh -J bastion db-internal" -m "password:" db-jump
 
+# SSH key with passphrase (auto-fills the key unlock prompt)
+autopass add -c "ssh -i ~/.ssh/deploy_key user@prod" -m "passphrase" prod-key
+
 # Run
 autopass prod           # connects to prod-server, auto-fills password
+autopass prod-key       # unlocks private key, then connects
 autopass bastion        # connects to bastion on port 2222
 ```
 
