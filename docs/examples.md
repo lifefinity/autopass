@@ -2,36 +2,60 @@
 
 Complete cookbook of autopass profiles for common tools.
 
+## How It Works
+
+```bash
+# 1. Add a profile (one-time setup)
+autopass add -c "ssh deploy@prod" -m "password:" myserver
+
+# 2. Run it — password auto-filled every time
+autopass myserver
+
+# 3. Manage
+autopass list              # show all profiles
+autopass update myserver   # modify fields
+autopass remove myserver   # delete
+autopass myserver --dry-run  # preview without running
+```
+
+## Profile Naming
+
+Each profile has a **unique name** — it is the key you use to run it. Names:
+- Must be unique across all profiles (regardless of tool type)
+- Must start with a letter/number, contain only `a-z A-Z 0-9 . - _`
+- Cannot conflict with subcommands (`add`, `list`, `remove`, etc.)
+
+If you try to add a name that already exists, autopass will error and suggest `update` instead.
+
+---
+
 ## SSH
 
 ```bash
-# Basic SSH with password
+# Add
 autopass add -c "ssh deploy@prod-server" -m "password:" prod
-
-# SSH with custom port
 autopass add -c "ssh -p 2222 admin@bastion.example.com" -m "password:" bastion
-
-# SSH jump host (ProxyJump)
 autopass add -c "ssh -J bastion db-internal" -m "password:" db-jump
+
+# Run
+autopass prod           # connects to prod-server, auto-fills password
+autopass bastion        # connects to bastion on port 2222
 ```
 
 ## Databases
 
 ```bash
-# PostgreSQL
+# Add
 autopass add -c "psql -h db.example.com -U admin mydb" -m "password" -p "=>\s*$" mydb
-
-# MySQL
 autopass add -c "mysql -h db.example.com -u root -p" -m "password:" mysql-prod
-
-# Oracle SQL*Plus
 autopass add -c "sqlplus admin@orcl" -m "password:" oracle-prod
-
-# MongoDB
 autopass add -c "mongosh mongodb://admin@db.example.com:27017/mydb" -m "password:" mongo-prod
-
-# Redis (AUTH command after connect)
 autopass add -c "redis-cli -h cache.example.com" -m "password:" redis
+
+# Run
+autopass mydb           # connects to PostgreSQL, auto-fills password
+autopass mysql-prod     # connects to MySQL
+autopass oracle-prod    # connects to Oracle
 ```
 
 ### Database with Post-Login Commands
