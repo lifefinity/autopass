@@ -1,8 +1,10 @@
 package cmd
 
 import (
+	"bytes"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 
 	"golang.org/x/term"
@@ -51,6 +53,11 @@ func deriveKey() ([]byte, error) {
 		return nil, err
 	}
 
+	// Priority: key_command > ssh_key file
+	if d.KeyCommand != "" {
+		return deriveKeyFromCommand(d.KeyCommand)
+	}
+
 	home, _ := os.UserHomeDir()
 	sshKeyPath := d.SSHKey
 	if len(sshKeyPath) > 2 && sshKeyPath[:2] == "~/" {
@@ -69,6 +76,33 @@ func deriveKey() ([]byte, error) {
 		if err != nil {
 			return nil, fmt.Errorf("deriving key: %w", err)
 		}
+	}
+
+	return key, nil
+}
+
+func deriveKeyFromCommand(command string) ([]byte, error) {
+	cmd := exec.Command("sh", "-c", command) // #nosec G204 -- user-configured key command
+	var stdout bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = os.Stderr
+
+	if err := cmd.Run(); err != nil {
+		return nil, fmt.Errorf("key_command failed: %w", err)
+	}
+
+	raw := bytes.TrimSpace(stdout.Bytes())
+	if len(raw) == 0 {
+		return nil, fmt.Errorf("key_command returned empty output")
+	}
+
+	key, err := crypto.DeriveKeyFromBytes(raw)
+	// Zero the raw material
+	for i := range raw {
+		raw[i] = 0
+	}
+	if err != nil {
+		return nil, err
 	}
 
 	return key, nil

@@ -32,6 +32,15 @@ func DeriveKey(sshKeyPath string, passphrase []byte) ([]byte, error) {
 		return nil, fmt.Errorf("parsing SSH key: %w", err)
 	}
 
+	return deriveFromRaw(rawBytes)
+}
+
+// DeriveKeyFromBytes derives an AES-256 key from raw key material (e.g., from an external command).
+func DeriveKeyFromBytes(raw []byte) ([]byte, error) {
+	return deriveFromRaw(raw)
+}
+
+func deriveFromRaw(rawBytes []byte) ([]byte, error) {
 	hkdfReader := hkdf.New(sha256.New, rawBytes, hkdfSalt, hkdfInfo)
 	derivedKey := make([]byte, 32)
 	if _, err := io.ReadFull(hkdfReader, derivedKey); err != nil {

@@ -16,6 +16,7 @@ import (
 var (
 	initNoPassphrase bool
 	initKey          string
+	initKeyCommand   string
 )
 
 var initCmd = &cobra.Command{
@@ -41,6 +42,7 @@ Examples:
 func init() {
 	initCmd.Flags().BoolVar(&initNoPassphrase, "no-passphrase", false, "skip passphrase protection for generated key")
 	initCmd.Flags().StringVar(&initKey, "key", "", "path to an existing SSH private key to use")
+	initCmd.Flags().StringVar(&initKeyCommand, "key-command", "", "shell command that outputs key material (e.g., vault/KMS)")
 	rootCmd.AddCommand(initCmd)
 }
 
@@ -59,6 +61,26 @@ func runInit(cmd *cobra.Command, args []string) error {
 	}
 
 	var sshKey string
+
+	if initKeyCommand != "" {
+		// Verify the command works
+		fmt.Printf("Verifying key command: %s\n", initKeyCommand)
+		if _, err := deriveKeyFromCommand(initKeyCommand); err != nil {
+			return fmt.Errorf("key-command verification failed: %w", err)
+		}
+
+		d := &data.Data{
+			KeyCommand: initKeyCommand,
+			Profiles:   make(map[string]data.Profile),
+		}
+		if err := data.Save(dataFilePath, d); err != nil {
+			return fmt.Errorf("writing data file: %w", err)
+		}
+
+		fmt.Println("Initialized with key-command. Data at:", dataFilePath)
+		fmt.Println("Next: run 'autopass add <name>' to store a secret.")
+		return nil
+	}
 
 	if initKey != "" {
 		// User specified a key path
