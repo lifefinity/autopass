@@ -28,6 +28,8 @@ Each profile has a **unique name** — it is the key you use to run it. Names:
 
 If you try to add a name that already exists (with the same service), autopass will error and suggest `update` instead.
 
+If you try to add a name that already exists, autopass will error and suggest `update` instead.
+
 ---
 
 ## SSH
@@ -50,6 +52,8 @@ autopass prod -s pg     # connects to PostgreSQL
 # Run
 autopass prod           # connects to prod-server, auto-fills password
 autopass prod-key       # unlocks private key, then connects
+# Run
+autopass prod           # connects to prod-server, auto-fills password
 autopass bastion        # connects to bastion on port 2222
 ```
 
