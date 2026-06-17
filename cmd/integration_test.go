@@ -109,7 +109,7 @@ func TestDataAddRemove_Integration(t *testing.T) {
 	}
 
 	// Remove
-	if err := d2.RemoveProfile("redis"); err != nil {
+	if err := d2.RemoveProfile("redis", ""); err != nil {
 		t.Fatalf("RemoveProfile failed: %v", err)
 	}
 	if err := data.Save(path, d2); err != nil {

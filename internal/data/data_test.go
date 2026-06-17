@@ -215,7 +215,7 @@ func TestRemoveProfile(t *testing.T) {
 		"two": {Command: "echo two"},
 	}}}
 
-	err := d.RemoveProfile("one")
+	err := d.RemoveProfile("one", "")
 	if err != nil {
 		t.Fatalf("RemoveProfile failed: %v", err)
 	}
@@ -230,7 +230,7 @@ func TestRemoveProfile(t *testing.T) {
 func TestRemoveProfile_NotFound(t *testing.T) {
 	d := &Data{Profiles: Profiles{Entries: make(map[string]Profile)}}
 
-	err := d.RemoveProfile("ghost")
+	err := d.RemoveProfile("ghost", "")
 	if err == nil {
 		t.Fatal("expected error for nonexistent profile")
 	}

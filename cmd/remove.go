@@ -33,7 +33,7 @@ func runRemove(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if err := d.Profiles.RemoveProfile(name); err != nil {
+	if err := d.Profiles.RemoveProfile(name, serviceFlag); err != nil {
 		return err
 	}
 

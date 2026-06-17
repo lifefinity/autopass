@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"io"
@@ -19,10 +20,11 @@ func runProfileWithSteps(profileName string, runOpts profileRunOpts) error {
 		return err
 	}
 
-	profile, ok := d.Profiles.Entries[profileName]
-	if !ok {
-		return fmt.Errorf("profile %q not found", profileName)
+	key, profile, err := d.Profiles.LookupProfile(profileName, serviceFlag)
+	if err != nil {
+		return err
 	}
+	profileKey := key
 
 	command := splitCommand(profile.Command)
 	timeout := profile.Timeout.Duration
@@ -33,17 +35,21 @@ func runProfileWithSteps(profileName string, runOpts profileRunOpts) error {
 	// Decrypt the profile's secret
 	var secret string
 	if profile.Secret != "" {
-		key, err := deriveKey()
-		if err != nil {
-			return err
-		}
-
 		ciphertext, err := base64.StdEncoding.DecodeString(profile.Secret)
 		if err != nil {
 			return fmt.Errorf("decoding secret: %w", err)
 		}
 
-		plaintext, err := crypto.Decrypt(key, ciphertext, []byte(profileName))
+		var plaintext []byte
+		if profile.KMSKeyID != "" {
+			plaintext, err = crypto.KMSDecrypt(context.Background(), ciphertext, []byte(profileKey))
+		} else {
+			key, keyErr := deriveKeyForProfile(profileKey)
+			if keyErr != nil {
+				return keyErr
+			}
+			plaintext, err = crypto.Decrypt(key, ciphertext, []byte(profileKey))
+		}
 		if err != nil {
 			return fmt.Errorf("decrypting secret: %w", err)
 		}

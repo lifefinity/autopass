@@ -6,11 +6,18 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"time"
 
 	"golang.org/x/term"
 
+	"github.com/lifefinity/autopass/internal/cache"
 	"github.com/lifefinity/autopass/internal/crypto"
 	"github.com/lifefinity/autopass/internal/data"
+)
+
+var (
+	noCache  bool
+	cacheTTL = 1 * time.Hour
 )
 
 func dataPath() (string, error) {
@@ -73,6 +80,17 @@ func saveData(d *data.Data) error {
 }
 
 func deriveKey() ([]byte, error) {
+	return deriveKeyForProfile("")
+}
+
+func deriveKeyForProfile(profile string) ([]byte, error) {
+	// Try cache first
+	if !noCache && profile != "" {
+		if cached, _ := cache.Get(profile, cacheTTL); cached != nil {
+			return cached, nil
+		}
+	}
+
 	d, err := loadData()
 	if err != nil {
 		return nil, err
@@ -80,7 +98,14 @@ func deriveKey() ([]byte, error) {
 
 	// Priority: key_command > key_file
 	if d.Config.KeyCommand != "" {
-		return deriveKeyFromCommand(d.Config.KeyCommand)
+		key, err := deriveKeyFromCommand(d.Config.KeyCommand)
+		if err != nil {
+			return nil, err
+		}
+		if !noCache && profile != "" {
+			_ = cache.Set(profile, key)
+		}
+		return key, nil
 	}
 
 	home, _ := os.UserHomeDir()
@@ -101,6 +126,10 @@ func deriveKey() ([]byte, error) {
 		if err != nil {
 			return nil, fmt.Errorf("deriving key: %w", err)
 		}
+	}
+
+	if !noCache && profile != "" {
+		_ = cache.Set(profile, key)
 	}
 
 	return key, nil

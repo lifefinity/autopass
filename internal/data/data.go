@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
+	"strings"
 	"time"
 )
 
@@ -44,12 +45,14 @@ type Data struct {
 type Profile struct {
 	Command     string    `json:"command"`
 	Description string    `json:"description,omitempty"`
+	Service     string    `json:"service,omitempty"`
 	Patterns    []Pattern `json:"patterns"`
 	Secret      string    `json:"secret,omitempty"`
 	Prompt      string    `json:"prompt,omitempty"`
 	Timeout     Duration  `json:"timeout"`
 	Steps       []string  `json:"steps,omitempty"`
 	After       []string  `json:"after,omitempty"`
+	KMSKeyID    string    `json:"kms_key_id,omitempty"`
 }
 
 type Pattern struct {
@@ -232,6 +235,22 @@ func Save(path string, d *Data) error {
 
 var validProfileName = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9._-]*$`)
 
+// ProfileKey returns the map key for a (name, service) pair.
+func ProfileKey(name, service string) string {
+	if service == "" {
+		return name
+	}
+	return name + "@" + service
+}
+
+// ParseProfileKey splits a map key back into (name, service).
+func ParseProfileKey(key string) (name, service string) {
+	if idx := strings.LastIndex(key, "@"); idx > 0 {
+		return key[:idx], key[idx+1:]
+	}
+	return key, ""
+}
+
 func (p *Profiles) AddProfile(name string, profile Profile) error {
 	if reservedNames[name] {
 		return fmt.Errorf("profile name %q conflicts with a subcommand", name)
@@ -245,28 +264,110 @@ func (p *Profiles) AddProfile(name string, profile Profile) error {
 	if p.Entries == nil {
 		p.Entries = make(map[string]Profile)
 	}
-	if _, exists := p.Entries[name]; exists {
+	key := ProfileKey(name, profile.Service)
+	if _, exists := p.Entries[key]; exists {
+		if profile.Service != "" {
+			return fmt.Errorf("profile %q (service=%s) already exists", name, profile.Service)
+		}
 		return fmt.Errorf("profile %q already exists (use 'autopass update %s' to modify)", name, name)
 	}
-	p.Entries[name] = profile
+	p.Entries[key] = profile
 	return nil
 }
 
-func (p *Profiles) RemoveProfile(name string) error {
-	if _, ok := p.Entries[name]; !ok {
+// LookupProfile resolves a profile by name and optional service flag.
+// If service is provided, returns exact (name, service) match.
+// If service is empty and name matches exactly one profile, returns it.
+// If service is empty and name matches multiple, returns them all with an error.
+func (p *Profiles) LookupProfile(name, service string) (string, Profile, error) {
+	if service != "" {
+		key := ProfileKey(name, service)
+		if prof, ok := p.Entries[key]; ok {
+			return key, prof, nil
+		}
+		return "", Profile{}, fmt.Errorf("profile %q (service=%s) not found", name, service)
+	}
+	// Try exact key first (no service)
+	if prof, ok := p.Entries[name]; ok {
+		matches := p.FindProfilesByName(name)
+		if len(matches) == 1 {
+			return name, prof, nil
+		}
+		// Multiple profiles with this name exist
+		return "", Profile{}, &AmbiguousProfileError{Name: name, Matches: matches}
+	}
+	// Search all entries for matching name
+	matches := p.FindProfilesByName(name)
+	if len(matches) == 1 {
+		return matches[0].Key, matches[0].Profile, nil
+	}
+	if len(matches) > 1 {
+		return "", Profile{}, &AmbiguousProfileError{Name: name, Matches: matches}
+	}
+	return "", Profile{}, fmt.Errorf("profile %q not found", name)
+}
+
+// ProfileMatch represents a matched profile entry.
+type ProfileMatch struct {
+	Key     string
+	Name    string
+	Service string
+	Profile Profile
+}
+
+// FindProfilesByName returns all profiles whose name matches.
+func (p *Profiles) FindProfilesByName(name string) []ProfileMatch {
+	var matches []ProfileMatch
+	for key, prof := range p.Entries {
+		n, s := ParseProfileKey(key)
+		if n == name {
+			matches = append(matches, ProfileMatch{Key: key, Name: n, Service: s, Profile: prof})
+		}
+	}
+	sort.Slice(matches, func(i, j int) bool {
+		return matches[i].Service < matches[j].Service
+	})
+	return matches
+}
+
+// AmbiguousProfileError is returned when multiple profiles match a name.
+type AmbiguousProfileError struct {
+	Name    string
+	Matches []ProfileMatch
+}
+
+func (e *AmbiguousProfileError) Error() string {
+	var sb strings.Builder
+	fmt.Fprintf(&sb, "multiple profiles named %q found. Use -s to specify service:\n\n", e.Name)
+	for _, m := range e.Matches {
+		svc := m.Service
+		if svc == "" {
+			svc = "(default)"
+		}
+		fmt.Fprintf(&sb, "  autopass %s -s %s\n", e.Name, svc)
+	}
+	return sb.String()
+}
+
+func (p *Profiles) RemoveProfile(name, service string) error {
+	key := ProfileKey(name, service)
+	if _, ok := p.Entries[key]; !ok {
+		if service != "" {
+			return fmt.Errorf("profile %q (service=%s) not found", name, service)
+		}
 		return fmt.Errorf("profile %q not found", name)
 	}
-	delete(p.Entries, name)
+	delete(p.Entries, key)
 	return nil
 }
 
 func (p *Profiles) ListProfiles() []string {
-	names := make([]string, 0, len(p.Entries))
-	for name := range p.Entries {
-		names = append(names, name)
+	keys := make([]string, 0, len(p.Entries))
+	for key := range p.Entries {
+		keys = append(keys, key)
 	}
-	sort.Strings(names)
-	return names
+	sort.Strings(keys)
+	return keys
 }
 
 // --- Helpers ---

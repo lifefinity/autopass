@@ -5,6 +5,8 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+
+	"github.com/lifefinity/autopass/internal/data"
 )
 
 var listCmd = &cobra.Command{
@@ -23,8 +25,8 @@ func runList(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	names := d.Profiles.ListProfiles()
-	if len(names) == 0 {
+	keys := d.Profiles.ListProfiles()
+	if len(keys) == 0 {
 		fmt.Println("No profiles configured.")
 		fmt.Println()
 		printExamples()
@@ -32,37 +34,66 @@ func runList(cmd *cobra.Command, args []string) error {
 	}
 
 	// Calculate column widths
-	maxName, maxCmd := len("NAME"), len("COMMAND")
-	for name, profile := range d.Profiles.Entries {
+	maxName, maxSvc, maxCmd := len("NAME"), len("SERVICE"), len("COMMAND")
+	for _, key := range keys {
+		name, svc := data.ParseProfileKey(key)
+		profile := d.Profiles.Entries[key]
 		if len(name) > maxName {
 			maxName = len(name)
+		}
+		if len(svc) > maxSvc {
+			maxSvc = len(svc)
 		}
 		if len(profile.Command) > maxCmd {
 			maxCmd = len(profile.Command)
 		}
 	}
 
-	header := fmt.Sprintf("  %-*s  %-*s  %s", maxName, "NAME", maxCmd, "COMMAND", "DESCRIPTION")
-	fmt.Println(header)
-	fmt.Println("  " + strings.Repeat("-", len(header)-2))
-	for _, name := range names {
-		profile := d.Profiles.Entries[name]
-		desc := profile.Description
-		if desc == "" {
-			// Fallback: show matched patterns
-			prompts := []string{}
-			for _, p := range profile.Patterns {
-				prompts = append(prompts, friendlyPattern(p.Match))
-			}
-			desc = strings.Join(prompts, ", ")
+	// Only show SERVICE column if any profile has a service
+	hasService := false
+	for _, key := range keys {
+		if _, svc := data.ParseProfileKey(key); svc != "" {
+			hasService = true
+			break
 		}
-		fmt.Printf("  %-*s  %-*s  %s\n", maxName, name, maxCmd, profile.Command, desc)
+	}
+
+	if hasService {
+		header := fmt.Sprintf("  %-*s  %-*s  %-*s  %s", maxName, "NAME", maxSvc, "SERVICE", maxCmd, "COMMAND", "DESCRIPTION")
+		fmt.Println(header)
+		fmt.Println("  " + strings.Repeat("-", len(header)-2))
+		for _, key := range keys {
+			name, svc := data.ParseProfileKey(key)
+			profile := d.Profiles.Entries[key]
+			desc := profileDesc(profile)
+			fmt.Printf("  %-*s  %-*s  %-*s  %s\n", maxName, name, maxSvc, svc, maxCmd, profile.Command, desc)
+		}
+	} else {
+		header := fmt.Sprintf("  %-*s  %-*s  %s", maxName, "NAME", maxCmd, "COMMAND", "DESCRIPTION")
+		fmt.Println(header)
+		fmt.Println("  " + strings.Repeat("-", len(header)-2))
+		for _, key := range keys {
+			profile := d.Profiles.Entries[key]
+			desc := profileDesc(profile)
+			fmt.Printf("  %-*s  %-*s  %s\n", maxName, key, maxCmd, profile.Command, desc)
+		}
 	}
 	fmt.Println()
 	fmt.Println("Run: autopass <name>")
 	fmt.Println()
 
 	return nil
+}
+
+func profileDesc(profile data.Profile) string {
+	if profile.Description != "" {
+		return profile.Description
+	}
+	prompts := []string{}
+	for _, p := range profile.Patterns {
+		prompts = append(prompts, friendlyPattern(p.Match))
+	}
+	return strings.Join(prompts, ", ")
 }
 
 func friendlyPattern(match string) string {
