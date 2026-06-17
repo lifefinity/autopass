@@ -24,8 +24,9 @@ Each profile has a **unique name** — it is the key you use to run it. Names:
 - Must be unique across all profiles (regardless of tool type)
 - Must start with a letter/number, contain only `a-z A-Z 0-9 . - _`
 - Cannot conflict with subcommands (`add`, `list`, `remove`, etc.)
+- The same name can be reused with different `--service` (`-s`) values for multi-service disambiguation (e.g. `prod` with `-s ssh` and `prod` with `-s pg`)
 
-If you try to add a name that already exists, autopass will error and suggest `update` instead.
+If you try to add a name that already exists (with the same service), autopass will error and suggest `update` instead.
 
 ---
 
@@ -39,6 +40,12 @@ autopass add -c "ssh -J bastion db-internal" -m "password:" db-jump
 
 # SSH key with passphrase (auto-fills the key unlock prompt)
 autopass add -c "ssh -i ~/.ssh/deploy_key user@prod" -m "passphrase" prod-key
+
+# Multi-service: same name, different service types
+autopass add -c "ssh deploy@prod-server" -m "password:" -s ssh prod
+autopass add -c "psql -h prod-db -U admin" -m "password" -s pg prod
+autopass prod -s ssh    # connects via SSH
+autopass prod -s pg     # connects to PostgreSQL
 
 # Run
 autopass prod           # connects to prod-server, auto-fills password
@@ -55,6 +62,12 @@ autopass add -c "mysql -h db.example.com -u root -p" -m "password:" mysql-prod
 autopass add -c "sqlplus admin@orcl" -m "password:" oracle-prod
 autopass add -c "mongosh mongodb://admin@db.example.com:27017/mydb" -m "password:" mongo-prod
 autopass add -c "redis-cli -h cache.example.com" -m "password:" redis
+
+# Multi-service: disambiguate same host by database type
+autopass add -c "psql -h shared-db -U app" -m "password" -s pg shared-db
+autopass add -c "mysql -h shared-db -u app -p" -m "password:" -s mysql shared-db
+autopass shared-db -s pg      # PostgreSQL
+autopass shared-db -s mysql   # MySQL
 
 # Run
 autopass mydb           # connects to PostgreSQL, auto-fills password
