@@ -166,7 +166,6 @@ func runAdd(cmd *cobra.Command, args []string) error {
 		timeout = 30 * time.Second
 	}
 
-
 	d, err := loadData()
 	if err != nil {
 		return err
@@ -190,7 +189,7 @@ func runAdd(cmd *cobra.Command, args []string) error {
 		KMSKeyID:    addKMSKeyID,
 	}
 
-	if err := d.Profiles.AddProfile(name, profile); err != nil {
+	if err := d.AddProfile(name, profile); err != nil {
 		return err
 	}
 

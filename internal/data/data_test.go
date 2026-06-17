@@ -13,11 +13,11 @@ func TestLoad_NonExistentFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load should not error on nonexistent file: %v", err)
 	}
-	if d.Profiles.Entries == nil {
+	if d.Entries == nil {
 		t.Fatal("Profiles map should be initialized")
 	}
-	if len(d.Profiles.Entries) != 0 {
-		t.Fatalf("expected empty profiles, got %d", len(d.Profiles.Entries))
+	if len(d.Entries) != 0 {
+		t.Fatalf("expected empty profiles, got %d", len(d.Entries))
 	}
 }
 
@@ -46,13 +46,13 @@ func TestLoad_ValidFile(t *testing.T) {
 		t.Fatalf("Load failed: %v", err)
 	}
 
-	if d.Config.KeyFile != "/home/user/.ssh/id_ed25519" {
-		t.Fatalf("unexpected key_file: %s", d.Config.KeyFile)
+	if d.KeyFile != "/home/user/.ssh/id_ed25519" {
+		t.Fatalf("unexpected key_file: %s", d.KeyFile)
 	}
-	if len(d.Profiles.Entries) != 1 {
-		t.Fatalf("expected 1 profile, got %d", len(d.Profiles.Entries))
+	if len(d.Entries) != 1 {
+		t.Fatalf("expected 1 profile, got %d", len(d.Entries))
 	}
-	p := d.Profiles.Entries["mwinit"]
+	p := d.Entries["mwinit"]
 	if p.Command != "mwinit -s -o" {
 		t.Fatalf("unexpected command: %s", p.Command)
 	}
@@ -124,7 +124,7 @@ func TestSave_And_Load(t *testing.T) {
 	path := filepath.Join(dir, "data.json")
 
 	d := &Data{
-		Config:   Config{KeyFile: "/path/to/key"},
+		Config: Config{KeyFile: "/path/to/key"},
 		Profiles: Profiles{Entries: map[string]Profile{
 			"test": {
 				Command:  "echo hello",
@@ -144,13 +144,13 @@ func TestSave_And_Load(t *testing.T) {
 		t.Fatalf("Load after Save failed: %v", err)
 	}
 
-	if loaded.Config.KeyFile != d.Config.KeyFile {
-		t.Fatalf("KeyFile mismatch: %s vs %s", loaded.Config.KeyFile, d.Config.KeyFile)
+	if loaded.KeyFile != d.KeyFile {
+		t.Fatalf("KeyFile mismatch: %s vs %s", loaded.KeyFile, d.KeyFile)
 	}
-	if len(loaded.Profiles.Entries) != 1 {
-		t.Fatalf("expected 1 profile, got %d", len(loaded.Profiles.Entries))
+	if len(loaded.Entries) != 1 {
+		t.Fatalf("expected 1 profile, got %d", len(loaded.Entries))
 	}
-	p := loaded.Profiles.Entries["test"]
+	p := loaded.Entries["test"]
 	if p.Command != "echo hello" {
 		t.Fatalf("Command mismatch: %s", p.Command)
 	}
@@ -195,7 +195,7 @@ func TestAddProfile(t *testing.T) {
 		t.Fatalf("AddProfile failed: %v", err)
 	}
 
-	if _, ok := d.Profiles.Entries["myprofile"]; !ok {
+	if _, ok := d.Entries["myprofile"]; !ok {
 		t.Fatal("profile not added")
 	}
 }
@@ -219,11 +219,11 @@ func TestRemoveProfile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("RemoveProfile failed: %v", err)
 	}
-	if _, ok := d.Profiles.Entries["one"]; ok {
+	if _, ok := d.Entries["one"]; ok {
 		t.Fatal("profile should be removed")
 	}
-	if len(d.Profiles.Entries) != 1 {
-		t.Fatalf("expected 1 profile remaining, got %d", len(d.Profiles.Entries))
+	if len(d.Entries) != 1 {
+		t.Fatalf("expected 1 profile remaining, got %d", len(d.Entries))
 	}
 }
 

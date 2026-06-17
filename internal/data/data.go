@@ -200,8 +200,8 @@ func Load(path string) (*Data, error) {
 		Config:   Config{KeyFile: legacy.KeyFile, KeyCommand: legacy.KeyCommand},
 		Profiles: Profiles{Entries: legacy.Profiles},
 	}
-	if d.Profiles.Entries == nil {
-		d.Profiles.Entries = make(map[string]Profile)
+	if d.Entries == nil {
+		d.Entries = make(map[string]Profile)
 	}
 	if err := validate(&d.Profiles); err != nil {
 		return nil, err
@@ -216,9 +216,9 @@ func Save(path string, d *Data) error {
 		KeyCommand string             `json:"key_command,omitempty"`
 		Profiles   map[string]Profile `json:"profiles"`
 	}{
-		KeyFile:    d.Config.KeyFile,
-		KeyCommand: d.Config.KeyCommand,
-		Profiles:   d.Profiles.Entries,
+		KeyFile:    d.KeyFile,
+		KeyCommand: d.KeyCommand,
+		Profiles:   d.Entries,
 	}
 	raw, err := json.MarshalIndent(legacy, "", "  ")
 	if err != nil {

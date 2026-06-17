@@ -39,15 +39,14 @@ func runChangeKey(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("new key not found: %w", err)
 	}
 
-
 	d, err := loadData()
 	if err != nil {
 		return err
 	}
 
 	// Derive old key
-	fmt.Printf("Enter passphrase for current key file (%s): ", d.Config.KeyFile)
-	oldKey, err := deriveKeyFromPath(d.Config.KeyFile)
+	fmt.Printf("Enter passphrase for current key file (%s): ", d.KeyFile)
+	oldKey, err := deriveKeyFromPath(d.KeyFile)
 	if err != nil {
 		return fmt.Errorf("deriving current key: %w", err)
 	}
@@ -63,7 +62,7 @@ func runChangeKey(cmd *cobra.Command, args []string) error {
 
 	// Re-encrypt all secrets
 	count := 0
-	for name, profile := range d.Profiles.Entries {
+	for name, profile := range d.Entries {
 		if profile.Secret == "" {
 			continue
 		}
@@ -84,7 +83,7 @@ func runChangeKey(cmd *cobra.Command, args []string) error {
 		}
 
 		profile.Secret = base64.StdEncoding.EncodeToString(newCiphertext)
-		d.Profiles.Entries[name] = profile
+		d.Entries[name] = profile
 		count++
 	}
 
@@ -92,9 +91,9 @@ func runChangeKey(cmd *cobra.Command, args []string) error {
 	home, _ := os.UserHomeDir()
 	absPath, _ := filepath.Abs(newKeyPath)
 	if rel, err := filepath.Rel(home, absPath); err == nil && len(rel) > 0 && rel[0] != '.' {
-		d.Config.KeyFile = "~/" + rel
+		d.KeyFile = "~/" + rel
 	} else {
-		d.Config.KeyFile = absPath
+		d.KeyFile = absPath
 	}
 
 	if err := saveData(d); err != nil {
@@ -102,7 +101,7 @@ func runChangeKey(cmd *cobra.Command, args []string) error {
 	}
 
 	fmt.Printf("✓ Re-encrypted %d profile(s) with new key\n", count)
-	fmt.Printf("  Key: %s\n", d.Config.KeyFile)
+	fmt.Printf("  Key: %s\n", d.KeyFile)
 	return nil
 }
 

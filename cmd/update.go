@@ -71,13 +71,12 @@ func init() {
 func runUpdate(cmd *cobra.Command, args []string) error {
 	profileName := args[0]
 
-
 	d, err := loadData()
 	if err != nil {
 		return err
 	}
 
-	key, profile, lookupErr := d.Profiles.LookupProfile(profileName, serviceFlag)
+	key, profile, lookupErr := d.LookupProfile(profileName, serviceFlag)
 	if lookupErr != nil {
 		return lookupErr
 	}
@@ -193,7 +192,7 @@ func runUpdate(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	d.Profiles.Entries[profileKey] = profile
+	d.Entries[profileKey] = profile
 
 	if err := saveData(d); err != nil {
 		return fmt.Errorf("saving data: %w", err)

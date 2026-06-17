@@ -1,6 +1,6 @@
 module github.com/lifefinity/autopass
 
-go 1.25.8
+go 1.26.4
 
 require (
 	github.com/aws/aws-sdk-go-v2/config v1.32.25

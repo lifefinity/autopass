@@ -41,11 +41,11 @@ func runImport(cmd *cobra.Command, args []string) error {
 
 	var added, skipped int
 	for name, p := range incoming {
-		if _, exists := d.Profiles.Entries[name]; exists && !importForce {
+		if _, exists := d.Entries[name]; exists && !importForce {
 			skipped++
 			continue
 		}
-		d.Profiles.Entries[name] = p
+		d.Entries[name] = p
 		added++
 	}
 

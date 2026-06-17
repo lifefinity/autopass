@@ -25,7 +25,7 @@ func runList(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	keys := d.Profiles.ListProfiles()
+	keys := d.ListProfiles()
 	if len(keys) == 0 {
 		fmt.Println("No profiles configured.")
 		fmt.Println()
@@ -37,7 +37,7 @@ func runList(cmd *cobra.Command, args []string) error {
 	maxName, maxSvc, maxCmd := len("NAME"), len("SERVICE"), len("COMMAND")
 	for _, key := range keys {
 		name, svc := data.ParseProfileKey(key)
-		profile := d.Profiles.Entries[key]
+		profile := d.Entries[key]
 		if len(name) > maxName {
 			maxName = len(name)
 		}
@@ -64,7 +64,7 @@ func runList(cmd *cobra.Command, args []string) error {
 		fmt.Println("  " + strings.Repeat("-", len(header)-2))
 		for _, key := range keys {
 			name, svc := data.ParseProfileKey(key)
-			profile := d.Profiles.Entries[key]
+			profile := d.Entries[key]
 			desc := profileDesc(profile)
 			fmt.Printf("  %-*s  %-*s  %-*s  %s\n", maxName, name, maxSvc, svc, maxCmd, profile.Command, desc)
 		}
@@ -73,7 +73,7 @@ func runList(cmd *cobra.Command, args []string) error {
 		fmt.Println(header)
 		fmt.Println("  " + strings.Repeat("-", len(header)-2))
 		for _, key := range keys {
-			profile := d.Profiles.Entries[key]
+			profile := d.Entries[key]
 			desc := profileDesc(profile)
 			fmt.Printf("  %-*s  %-*s  %s\n", maxName, key, maxCmd, profile.Command, desc)
 		}

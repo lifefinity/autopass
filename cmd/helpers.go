@@ -97,8 +97,8 @@ func deriveKeyForProfile(profile string) ([]byte, error) {
 	}
 
 	// Priority: key_command > key_file
-	if d.Config.KeyCommand != "" {
-		key, err := deriveKeyFromCommand(d.Config.KeyCommand)
+	if d.KeyCommand != "" {
+		key, err := deriveKeyFromCommand(d.KeyCommand)
 		if err != nil {
 			return nil, err
 		}
@@ -109,7 +109,7 @@ func deriveKeyForProfile(profile string) ([]byte, error) {
 	}
 
 	home, _ := os.UserHomeDir()
-	keyFilePath := d.Config.KeyFile
+	keyFilePath := d.KeyFile
 	if len(keyFilePath) > 2 && keyFilePath[:2] == "~/" {
 		keyFilePath = filepath.Join(home, keyFilePath[2:])
 	}

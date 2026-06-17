@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
-
 )
 
 var removeCmd = &cobra.Command{
@@ -27,13 +26,12 @@ func init() {
 func runRemove(cmd *cobra.Command, args []string) error {
 	name := args[0]
 
-
 	d, err := loadData()
 	if err != nil {
 		return err
 	}
 
-	if err := d.Profiles.RemoveProfile(name, serviceFlag); err != nil {
+	if err := d.RemoveProfile(name, serviceFlag); err != nil {
 		return err
 	}
 

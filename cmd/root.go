@@ -169,7 +169,7 @@ func completeProfileNames(prefix string) []string {
 	if err != nil {
 		return nil
 	}
-	names := d.Profiles.ListProfiles()
+	names := d.ListProfiles()
 	if prefix == "" {
 		return names
 	}

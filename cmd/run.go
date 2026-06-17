@@ -20,7 +20,7 @@ func runProfileWithSteps(profileName string, runOpts profileRunOpts) error {
 		return err
 	}
 
-	key, profile, err := d.Profiles.LookupProfile(profileName, serviceFlag)
+	key, profile, err := d.LookupProfile(profileName, serviceFlag)
 	if err != nil {
 		return err
 	}
