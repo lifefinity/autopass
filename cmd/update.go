@@ -23,6 +23,7 @@ var (
 	updateSteps         []string
 	updateAfter         []string
 	updateDesc          string
+	updateKMSKeyID      string
 )
 
 var updateCmd = &cobra.Command{
@@ -63,26 +64,23 @@ func init() {
 	updateCmd.Flags().BoolVar(&updateCaseSensitive, "case-sensitive", false, "match pattern with exact case (default: case-insensitive)")
 	updateCmd.Flags().StringArrayVar(&updateSteps, "then", nil, "update post-login commands (replaces existing)")
 	updateCmd.Flags().StringArrayVar(&updateAfter, "after", nil, "update post-exit commands (replaces existing)")
+	updateCmd.Flags().StringVar(&updateKMSKeyID, "kms-key-id", "", "set AWS KMS key ID for envelope encryption")
 	rootCmd.AddCommand(updateCmd)
 }
 
 func runUpdate(cmd *cobra.Command, args []string) error {
 	profileName := args[0]
 
-	path, err := dataPath()
+	d, err := loadData()
 	if err != nil {
 		return err
 	}
 
-	d, err := data.Load(path)
-	if err != nil {
-		return fmt.Errorf("loading data: %w", err)
+	key, profile, lookupErr := d.LookupProfile(profileName, serviceFlag)
+	if lookupErr != nil {
+		return lookupErr
 	}
-
-	profile, ok := d.Profiles[profileName]
-	if !ok {
-		return fmt.Errorf("profile %q not found", profileName)
-	}
+	profileKey := key
 
 	// Check if any flag was provided
 	anyChange := cmd.Flags().Changed("command") ||
@@ -93,6 +91,7 @@ func runUpdate(cmd *cobra.Command, args []string) error {
 		cmd.Flags().Changed("case-sensitive") ||
 		cmd.Flags().Changed("then") ||
 		cmd.Flags().Changed("after") ||
+		cmd.Flags().Changed("kms-key-id") ||
 		updateSecret
 
 	if !anyChange {
@@ -150,11 +149,16 @@ func runUpdate(cmd *cobra.Command, args []string) error {
 		profile.After = updateAfter
 	}
 
+	// Update KMS key ID
+	if cmd.Flags().Changed("kms-key-id") {
+		profile.KMSKeyID = updateKMSKeyID
+	}
+
 	// Update secret
 	if updateSecret {
-		key, keyErr := deriveKey()
-		if keyErr != nil {
-			return keyErr
+		kmsKey := profile.KMSKeyID
+		if cmd.Flags().Changed("kms-key-id") {
+			kmsKey = updateKMSKeyID
 		}
 
 		fmt.Printf("Enter new secret (will be hidden): ")
@@ -169,16 +173,28 @@ func runUpdate(cmd *cobra.Command, args []string) error {
 			}
 		}()
 
-		ciphertext, encErr := crypto.Encrypt(key, secret)
-		if encErr != nil {
-			return fmt.Errorf("encrypting secret: %w", encErr)
+		if kmsKey != "" {
+			sealed, encErr := crypto.KMSEncrypt(cmd.Context(), kmsKey, secret, []byte(profileKey))
+			if encErr != nil {
+				return fmt.Errorf("KMS encrypting secret: %w", encErr)
+			}
+			profile.Secret = base64.StdEncoding.EncodeToString(sealed)
+		} else {
+			key, keyErr := deriveKey()
+			if keyErr != nil {
+				return keyErr
+			}
+			ciphertext, encErr := crypto.Encrypt(key, secret, []byte(profileKey))
+			if encErr != nil {
+				return fmt.Errorf("encrypting secret: %w", encErr)
+			}
+			profile.Secret = base64.StdEncoding.EncodeToString(ciphertext)
 		}
-		profile.Secret = base64.StdEncoding.EncodeToString(ciphertext)
 	}
 
-	d.Profiles[profileName] = profile
+	d.Entries[profileKey] = profile
 
-	if err := data.Save(path, d); err != nil {
+	if err := saveData(d); err != nil {
 		return fmt.Errorf("saving data: %w", err)
 	}
 

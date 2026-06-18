@@ -67,6 +67,17 @@ autopass myserver
     └─ 进程正常退出
 ```
 
+### KMS 模式（团队/企业）
+
+当 profile 设置了 `--kms-key-id` 时，autopass 使用 AWS KMS 信封加密代替 SSH 密钥派生：
+
+```
+autopass myserver
+    ├─ 调用 KMS GenerateDataKey -> 获取明文 DEK + 加密 DEK
+    ├─ 使用 DEK 加密 secret (AES-256-GCM)
+    └─ 存储加密 DEK + 密文
+```
+
 ## 示例
 
 ### 常用 Profile
@@ -88,7 +99,7 @@ autopass add -c "sudo apt upgrade -y" -m "password" -d "系统更新" apt-upgrad
 autopass add -c "kinit admin@EXAMPLE.COM" -m "password for" -d "Kerberos 认证" krb
 
 # Midway (Amazon)
-autopass add -c "mwinit -s -o" -m "PIN:" --after "date" -d "Midway 刷新" mwinit
+autopass add -c "kinit admin@CORP.COM" -m "Password:" --after "klist" -d "Kerberos 认证" krb
 ```
 
 ### 登录后执行命令 (--then)
@@ -111,8 +122,8 @@ autopass mydb --then "\timing on" --script queries.sql --then "\q"
 主进程正常退出后，在新 shell 中执行命令：
 
 ```bash
-# mwinit 完成后显示时间
-autopass mwinit --after "date"
+# kinit 完成后显示凭据
+autopass krb --after "klist"
 
 # SSH 退出后同步文件
 autopass prod --after "rsync -a ./dist/ server:/app/"
@@ -131,7 +142,7 @@ autopass update prod --secret                    # 更换密码
 autopass update prod -c "ssh newuser@host"       # 更换命令
 autopass update prod -d "新的描述"                # 更换描述
 autopass update mydb --then "\timing on"         # 设置登录后步骤
-autopass update mwinit --after "date"            # 设置退出后命令
+autopass update krb --after "klist"            # 设置退出后命令
 autopass update mysql-prod -m "password:" -t 60s # 更换匹配和超时
 ```
 
@@ -146,7 +157,7 @@ autopass mydb -q --then "SELECT 1;"           # 短写
 
 | 命令 | 说明 |
 |------|------|
-| `autopass <profile>` | 运行 profile，自动应答 |
+| `autopass <profile> [-s service]` | 运行 profile，自动应答 |
 | `autopass add <profile>` | 创建新 profile |
 | `autopass update <profile>` | 更新 profile 字段 |
 | `autopass list` | 列出所有 profile |
@@ -166,7 +177,7 @@ autopass mydb -q --then "SELECT 1;"           # 短写
 |---|----------|-----------|
 | **何时执行** | 在运行的会话内部 | 主进程退出后 |
 | **需要** | `-p` 指定 shell 提示符 | 无要求 |
-| **适用场景** | psql、mysql、ssh 交互式 shell | mwinit、kinit 等一次性命令 |
+| **适用场景** | psql、mysql、ssh 交互式 shell | kinit、docker login 等一次性命令 |
 | **执行环境** | PTY 会话内 | 新的 `sh -c` shell |
 
 ## 模式匹配
@@ -183,6 +194,63 @@ autopass change-key ~/.ssh/id_ed25519_new
 ```
 
 用旧 key 解密所有 secret，用新 key 重新加密。两个 key 都可以有密码保护。
+
+## 多服务 Profile
+
+当一台服务器有多个服务（SSH、PostgreSQL、Oracle 等）时，使用 `-s` 区分：
+
+```bash
+# 为同一服务器添加多个服务
+autopass add -c "ssh admin@prod" -m "password:" prod -s ssh
+autopass add -c "psql -h prod -U admin" -m "password" prod -s pg
+autopass add -c "sqlplus admin@prod-orcl" -m "password:" prod -s oracle
+
+# 运行 -- 名称唯一时直接运行
+autopass prod              # 多个匹配 -> 显示选择菜单
+autopass prod -s ssh       # 精确匹配 -> 直接运行
+
+# list 显示 service 列
+autopass list
+# NAME   SERVICE   COMMAND                          DESCRIPTION
+# prod   ssh       ssh admin@prod                   ...
+# prod   pg        psql -h prod -U admin            ...
+# prod   oracle    sqlplus admin@prod-orcl           ...
+```
+
+唯一性约束基于 `(name, service)` 对。不带 `-s` 的 profile service 字段为空。
+
+## 钥匙串缓存
+
+autopass 将派生的 AES 加密密钥缓存在操作系统钥匙串中（macOS Keychain、Linux secret-service、Windows Credential Manager），避免每次运行都读取 SSH 密钥。
+
+- 缓存 TTL：1 小时（自动过期）
+- 按 profile 隔离（每个 profile 独立缓存）
+- 使用 `--no-cache` 禁用
+
+```bash
+autopass prod              # 首次运行：读取 SSH key，缓存派生密钥
+autopass prod              # 后续运行：使用缓存密钥（更快）
+autopass prod --no-cache   # 跳过缓存，重新从 SSH key 派生
+```
+
+## KMS 信封加密
+
+用于团队/企业场景，autopass 支持 AWS KMS 信封加密。不再从本地 SSH 密钥派生，而是由 KMS 生成和管理数据加密密钥。
+
+```bash
+# 使用 KMS 加密添加 profile
+autopass add -c "ssh admin@prod" -m "password:" prod --kms-key-id arn:aws:kms:us-east-1:123456:key/abc-def
+
+# 已有 profile：切换到 KMS
+autopass update prod --kms-key-id arn:aws:kms:us-east-1:123456:key/abc-def
+
+# 正常运行 -- KMS 解密透明进行
+autopass prod
+```
+
+要求：
+- 已配置 AWS 凭证（`~/.aws/credentials` 或环境变量）
+- IAM 权限：对指定密钥的 `kms:GenerateDataKey`、`kms:Decrypt`
 
 ## 备份与恢复
 

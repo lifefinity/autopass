@@ -16,6 +16,7 @@ import (
 var (
 	initNoPassphrase bool
 	initKey          string
+	initKeyCommand   string
 )
 
 var initCmd = &cobra.Command{
@@ -41,6 +42,7 @@ Examples:
 func init() {
 	initCmd.Flags().BoolVar(&initNoPassphrase, "no-passphrase", false, "skip passphrase protection for generated key")
 	initCmd.Flags().StringVar(&initKey, "key", "", "path to an existing SSH private key to use")
+	initCmd.Flags().StringVar(&initKeyCommand, "key-command", "", "shell command that outputs key material (e.g., vault/KMS)")
 	rootCmd.AddCommand(initCmd)
 }
 
@@ -51,26 +53,52 @@ func runInit(cmd *cobra.Command, args []string) error {
 	}
 
 	autopassDir := filepath.Join(home, ".autopass")
-	dataFilePath := filepath.Join(autopassDir, "data.json")
+	cfgPath := filepath.Join(autopassDir, "config.json")
 
-	if _, err := os.Stat(dataFilePath); err == nil {
-		fmt.Println("autopass is already initialized. Data at:", dataFilePath)
+	if _, err := os.Stat(cfgPath); err == nil {
+		fmt.Println("autopass is already initialized. Config at:", cfgPath)
+		return nil
+	}
+	// Also check legacy
+	legacyPath := filepath.Join(autopassDir, "data.json")
+	if _, err := os.Stat(legacyPath); err == nil {
+		fmt.Println("autopass is already initialized (legacy format). Data at:", legacyPath)
 		return nil
 	}
 
-	var sshKey string
+	var keyFile string
+
+	if initKeyCommand != "" {
+		// Verify the command works
+		fmt.Printf("Verifying key command: %s\n", initKeyCommand)
+		if _, err := deriveKeyFromCommand(initKeyCommand); err != nil {
+			return fmt.Errorf("key-command verification failed: %w", err)
+		}
+
+		d := &data.Data{
+			Config:   data.Config{KeyCommand: initKeyCommand},
+			Profiles: data.Profiles{Entries: make(map[string]data.Profile)},
+		}
+		if err := saveData(d); err != nil {
+			return fmt.Errorf("saving config: %w", err)
+		}
+
+		fmt.Println("Initialized with key-command. Config at:", cfgPath)
+		fmt.Println("Next: run 'autopass add <name>' to store a secret.")
+		return nil
+	}
 
 	if initKey != "" {
 		// User specified a key path
-		sshKey = initKey
-		fmt.Printf("Using specified key: %s\n", sshKey)
+		keyFile = initKey
+		fmt.Printf("Using specified key: %s\n", keyFile)
 	} else {
-		sshKey = findSSHKey(home)
+		keyFile = findKeyFile(home)
 	}
 
-	if sshKey == "" {
+	if keyFile == "" {
 		// No SSH key found — generate a dedicated autopass key
-		sshKey = filepath.Join(autopassDir, "autopass_key")
+		keyFile = filepath.Join(autopassDir, "autopass_key")
 
 		var passphrase []byte
 		if !initNoPassphrase {
@@ -81,19 +109,19 @@ func runInit(cmd *cobra.Command, args []string) error {
 		}
 
 		fmt.Println("Generating autopass encryption key...")
-		if err := crypto.GenerateKey(sshKey, passphrase); err != nil {
+		if err := crypto.GenerateKey(keyFile, passphrase); err != nil {
 			return fmt.Errorf("generating key: %w", err)
 		}
-		fmt.Printf("Created: %s\n", sshKey)
+		fmt.Printf("Created: %s\n", keyFile)
 		if len(passphrase) == 0 {
 			fmt.Println("⚠️  Key is unprotected (no passphrase). OK for full-disk encrypted machines.")
 		}
 	} else {
-		fmt.Printf("Using SSH key: %s\n", sshKey)
+		fmt.Printf("Using key file: %s\n", keyFile)
 	}
 
 	// Verify we can read the key (may need passphrase)
-	_, err = crypto.DeriveKey(sshKey, nil)
+	_, err = crypto.DeriveKey(keyFile, nil)
 	if err != nil {
 		fmt.Print("Enter SSH key passphrase: ")
 		passphrase, readErr := term.ReadPassword(int(os.Stdin.Fd())) // #nosec G115
@@ -102,22 +130,22 @@ func runInit(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("reading passphrase: %w", readErr)
 		}
 
-		_, err = crypto.DeriveKey(sshKey, passphrase)
+		_, err = crypto.DeriveKey(keyFile, passphrase)
 		if err != nil {
 			return fmt.Errorf("cannot derive key from SSH key: %w", err)
 		}
 	}
 
 	d := &data.Data{
-		SSHKey:   sshKey,
-		Profiles: make(map[string]data.Profile),
+		Config:   data.Config{KeyFile: keyFile},
+		Profiles: data.Profiles{Entries: make(map[string]data.Profile)},
 	}
 
-	if err := data.Save(dataFilePath, d); err != nil {
-		return fmt.Errorf("writing data file: %w", err)
+	if err := saveData(d); err != nil {
+		return fmt.Errorf("saving config: %w", err)
 	}
 
-	fmt.Println("Initialized. Data at:", dataFilePath)
+	fmt.Println("Initialized. Config at:", cfgPath)
 	fmt.Println("Next: run 'autopass add <name>' to store a secret.")
 	return nil
 }
@@ -154,7 +182,7 @@ func promptNewPassphrase() ([]byte, error) {
 	return p1, nil
 }
 
-func findSSHKey(home string) string {
+func findKeyFile(home string) string {
 	sshDir := filepath.Join(home, ".ssh")
 	candidates := []string{"id_ed25519", "id_rsa", "id_ecdsa"}
 
