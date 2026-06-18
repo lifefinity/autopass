@@ -77,6 +77,9 @@ autopass add -c "kinit admin@CORP.COM" -m "Password:" -d "Kerberos auth" --after
 | `--case-sensitive` | | Match with exact case (default: case-insensitive) |
 | `--then` | | Command to send inside session after login (can specify multiple) |
 | `--after` | | Command to run in new shell after profile exits (can specify multiple) |
+| `--service` | `-s` | Service type for multi-service disambiguation (e.g. ssh, pg, oracle) |
+| `--kms-key-id` | | AWS KMS key ARN for envelope encryption (replaces SSH key derivation) |
+| `--no-cache` | | Bypass keychain cache, re-derive key from SSH key |
 
 ### --then vs --after
 
@@ -103,6 +106,35 @@ autopass add -c "kinit admin@CORP.COM" -m "Password:" \
   --after "date" --after "echo 'Midway refreshed'" \
   -d "Kerberos auth" krb
 ```
+
+## Multi-Service Profiles
+
+When a server has multiple services (SSH, PostgreSQL, Oracle, etc.), use `-s` to store them under the same name:
+
+```bash
+autopass add -c "ssh admin@prod" -m "password:" -s ssh prod
+autopass add -c "psql -h prod -U admin" -m "password" -s pg prod
+
+autopass prod -s ssh   # run SSH profile
+autopass prod -s pg    # run PostgreSQL profile
+autopass prod          # if ambiguous, shows selection menu
+```
+
+Uniqueness is enforced on `(name, service)` pairs. Profiles without `-s` have an empty service field.
+
+## KMS Envelope Encryption
+
+For team/enterprise use, autopass supports AWS KMS instead of SSH key derivation:
+
+```bash
+# New profile with KMS
+autopass add -c "ssh admin@prod" -m "password:" --kms-key-id arn:aws:kms:us-east-1:123456:key/abc prod
+
+# Switch existing profile to KMS
+autopass update prod --kms-key-id arn:aws:kms:us-east-1:123456:key/abc
+```
+
+Requires AWS credentials and IAM permissions: `kms:GenerateDataKey`, `kms:Decrypt`.
 
 ## Running a Profile
 

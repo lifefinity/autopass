@@ -47,7 +47,7 @@ func TestEncryptDecrypt_RoundTrip(t *testing.T) {
 
 	plaintext := []byte("my-secret-password")
 
-	ciphertext, err := Encrypt(key, plaintext)
+	ciphertext, err := Encrypt(key, plaintext, []byte("test"))
 	if err != nil {
 		t.Fatalf("Encrypt failed: %v", err)
 	}
@@ -56,7 +56,7 @@ func TestEncryptDecrypt_RoundTrip(t *testing.T) {
 		t.Fatal("ciphertext should differ from plaintext")
 	}
 
-	decrypted, err := Decrypt(key, ciphertext)
+	decrypted, err := Decrypt(key, ciphertext, []byte("test"))
 	if err != nil {
 		t.Fatalf("Decrypt failed: %v", err)
 	}
@@ -71,12 +71,12 @@ func TestDecrypt_WrongKey(t *testing.T) {
 	key2 := make([]byte, 32)
 	key2[0] = 0xFF
 
-	ciphertext, err := Encrypt(key1, []byte("secret"))
+	ciphertext, err := Encrypt(key1, []byte("secret"), []byte("test"))
 	if err != nil {
 		t.Fatalf("Encrypt failed: %v", err)
 	}
 
-	_, err = Decrypt(key2, ciphertext)
+	_, err = Decrypt(key2, ciphertext, []byte("test"))
 	if err == nil {
 		t.Fatal("expected error decrypting with wrong key")
 	}
@@ -86,8 +86,8 @@ func TestEncrypt_DifferentNonce(t *testing.T) {
 	key := make([]byte, 32)
 	plaintext := []byte("same-input")
 
-	c1, _ := Encrypt(key, plaintext)
-	c2, _ := Encrypt(key, plaintext)
+	c1, _ := Encrypt(key, plaintext, []byte("test"))
+	c2, _ := Encrypt(key, plaintext, []byte("test"))
 
 	if string(c1) == string(c2) {
 		t.Fatal("two encryptions of same plaintext should produce different ciphertext (random nonce)")

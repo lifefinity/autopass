@@ -24,6 +24,7 @@ var (
 	addSteps         []string
 	addAfter         []string
 	addDesc          string
+	addKMSKeyID      string
 )
 
 var addCmd = &cobra.Command{
@@ -95,6 +96,7 @@ func init() {
 	addCmd.Flags().BoolVar(&addCaseSensitive, "case-sensitive", false, "match pattern with exact case (default: case-insensitive)")
 	addCmd.Flags().StringArrayVar(&addSteps, "then", nil, "command to run after login (can specify multiple)")
 	addCmd.Flags().StringArrayVar(&addAfter, "after", nil, "command to run in new shell after profile exits (can specify multiple)")
+	addCmd.Flags().StringVar(&addKMSKeyID, "kms-key-id", "", "AWS KMS key ID for envelope encryption (overrides SSH key derivation)")
 	rootCmd.AddCommand(addCmd)
 }
 
@@ -122,9 +124,13 @@ func runAdd(cmd *cobra.Command, args []string) error {
 		matches = []string{m}
 	}
 
-	key, err := deriveKey()
-	if err != nil {
-		return err
+	var key []byte
+	if addKMSKeyID == "" {
+		var keyErr error
+		key, keyErr = deriveKey()
+		if keyErr != nil {
+			return keyErr
+		}
 	}
 
 	fmt.Printf("Enter secret (will be hidden): ")
@@ -139,25 +145,30 @@ func runAdd(cmd *cobra.Command, args []string) error {
 		}
 	}()
 
-	ciphertext, err := crypto.Encrypt(key, secret)
-	if err != nil {
-		return fmt.Errorf("encrypting secret: %w", err)
+	var encryptedB64 string
+	profileKey := data.ProfileKey(name, serviceFlag)
+	if addKMSKeyID != "" {
+		sealed, kmsErr := crypto.KMSEncrypt(cmd.Context(), addKMSKeyID, secret, []byte(profileKey))
+		if kmsErr != nil {
+			return fmt.Errorf("KMS encrypting secret: %w", kmsErr)
+		}
+		encryptedB64 = base64.StdEncoding.EncodeToString(sealed)
+	} else {
+		ciphertext, encErr := crypto.Encrypt(key, secret, []byte(profileKey))
+		if encErr != nil {
+			return fmt.Errorf("encrypting secret: %w", encErr)
+		}
+		encryptedB64 = base64.StdEncoding.EncodeToString(ciphertext)
 	}
-	encryptedB64 := base64.StdEncoding.EncodeToString(ciphertext)
 
 	timeout, _ := time.ParseDuration(addTimeout)
 	if timeout == 0 {
 		timeout = 30 * time.Second
 	}
 
-	path, err := dataPath()
+	d, err := loadData()
 	if err != nil {
 		return err
-	}
-
-	d, err := data.Load(path)
-	if err != nil {
-		return fmt.Errorf("loading data: %w", err)
 	}
 
 	patterns := make([]data.Pattern, len(matches))
@@ -168,19 +179,21 @@ func runAdd(cmd *cobra.Command, args []string) error {
 	profile := data.Profile{
 		Command:     command,
 		Description: addDesc,
+		Service:     serviceFlag,
 		Patterns:    patterns,
 		Secret:      encryptedB64,
 		Prompt:      addPrompt,
 		Timeout:     data.Duration{Duration: timeout},
 		Steps:       addSteps,
 		After:       addAfter,
+		KMSKeyID:    addKMSKeyID,
 	}
 
 	if err := d.AddProfile(name, profile); err != nil {
 		return err
 	}
 
-	if err := data.Save(path, d); err != nil {
+	if err := saveData(d); err != nil {
 		return fmt.Errorf("saving data: %w", err)
 	}
 
