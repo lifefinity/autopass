@@ -1,63 +1,120 @@
 package cmd
 
 import (
+	"bytes"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"time"
 
 	"golang.org/x/term"
 
+	"github.com/lifefinity/autopass/internal/cache"
 	"github.com/lifefinity/autopass/internal/crypto"
 	"github.com/lifefinity/autopass/internal/data"
 )
 
+var (
+	noCache  bool
+	cacheTTL = 1 * time.Hour
+)
+
 func dataPath() (string, error) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", fmt.Errorf("getting home directory: %w", err)
-	}
-	return filepath.Join(home, ".autopass", "data.json"), nil
+	return data.ProfilesPath()
+}
+
+func configPath() (string, error) {
+	return data.ConfigPath()
 }
 
 func loadData() (*data.Data, error) {
-	path, err := dataPath()
+	cfgPath, err := configPath()
+	if err != nil {
+		return nil, err
+	}
+	profPath, err := dataPath()
 	if err != nil {
 		return nil, err
 	}
 
-	d, err := data.Load(path)
-	if err != nil {
-		return nil, fmt.Errorf("loading data: %w", err)
-	}
-
-	// If data.json doesn't exist on disk, auto-initialize
-	if _, statErr := os.Stat(path); os.IsNotExist(statErr) {
+	// Check if initialized (config.json exists)
+	if _, statErr := os.Stat(cfgPath); os.IsNotExist(statErr) {
+		// Try legacy data.json
+		dir, _ := data.Dir()
+		legacyPath := filepath.Join(dir, "data.json")
+		if _, legErr := os.Stat(legacyPath); legErr == nil {
+			return data.Load(legacyPath)
+		}
 		fmt.Println("autopass is not initialized. Running setup now...")
 		if initErr := runInit(nil, nil); initErr != nil {
 			return nil, fmt.Errorf("auto-initialization failed: %w", initErr)
 		}
-		d, err = data.Load(path)
-		if err != nil {
-			return nil, fmt.Errorf("loading data after init: %w", err)
-		}
 	}
 
-	return d, nil
+	cfg, err := data.LoadConfig(cfgPath)
+	if err != nil {
+		return nil, err
+	}
+	prof, err := data.LoadProfiles(profPath)
+	if err != nil {
+		return nil, err
+	}
+
+	return &data.Data{Config: *cfg, Profiles: *prof}, nil
+}
+
+func saveData(d *data.Data) error {
+	cfgPath, err := configPath()
+	if err != nil {
+		return err
+	}
+	profPath, err := dataPath()
+	if err != nil {
+		return err
+	}
+	if err := data.SaveConfig(cfgPath, &d.Config); err != nil {
+		return err
+	}
+	return data.SaveProfiles(profPath, &d.Profiles)
 }
 
 func deriveKey() ([]byte, error) {
+	return deriveKeyForProfile("")
+}
+
+func deriveKeyForProfile(profile string) ([]byte, error) {
+	// Try cache first
+	if !noCache && profile != "" {
+		if cached, _ := cache.Get(profile, cacheTTL); cached != nil {
+			return cached, nil
+		}
+	}
+
 	d, err := loadData()
 	if err != nil {
 		return nil, err
 	}
 
-	home, _ := os.UserHomeDir()
-	sshKeyPath := d.SSHKey
-	if len(sshKeyPath) > 2 && sshKeyPath[:2] == "~/" {
-		sshKeyPath = filepath.Join(home, sshKeyPath[2:])
+	// Priority: key_command > key_file
+	if d.KeyCommand != "" {
+		key, err := deriveKeyFromCommand(d.KeyCommand)
+		if err != nil {
+			return nil, err
+		}
+		if !noCache && profile != "" {
+			_ = cache.Set(profile, key)
+		}
+		return key, nil
 	}
 
-	key, err := crypto.DeriveKey(sshKeyPath, nil)
+	home, _ := os.UserHomeDir()
+	keyFilePath := d.KeyFile
+	if len(keyFilePath) > 2 && keyFilePath[:2] == "~/" {
+		keyFilePath = filepath.Join(home, keyFilePath[2:])
+	}
+
+	key, err := crypto.DeriveKey(keyFilePath, nil)
 	if err != nil {
 		fmt.Print("Enter SSH key passphrase: ")
 		passphrase, readErr := term.ReadPassword(int(os.Stdin.Fd())) // #nosec G115
@@ -65,10 +122,41 @@ func deriveKey() ([]byte, error) {
 		if readErr != nil {
 			return nil, fmt.Errorf("reading passphrase: %w", readErr)
 		}
-		key, err = crypto.DeriveKey(sshKeyPath, passphrase)
+		key, err = crypto.DeriveKey(keyFilePath, passphrase)
 		if err != nil {
 			return nil, fmt.Errorf("deriving key: %w", err)
 		}
+	}
+
+	if !noCache && profile != "" {
+		_ = cache.Set(profile, key)
+	}
+
+	return key, nil
+}
+
+func deriveKeyFromCommand(command string) ([]byte, error) {
+	cmd := exec.Command("sh", "-c", command) // #nosec G204 -- user-configured key command
+	var stdout bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = os.Stderr
+
+	if err := cmd.Run(); err != nil {
+		return nil, fmt.Errorf("key_command failed: %w", err)
+	}
+
+	raw := bytes.TrimSpace(stdout.Bytes())
+	if len(raw) == 0 {
+		return nil, fmt.Errorf("key_command returned empty output")
+	}
+
+	key, err := crypto.DeriveKeyFromBytes(raw)
+	// Zero the raw material
+	for i := range raw {
+		raw[i] = 0
+	}
+	if err != nil {
+		return nil, err
 	}
 
 	return key, nil
