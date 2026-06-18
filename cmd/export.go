@@ -27,8 +27,8 @@ func runExport(cmd *cobra.Command, args []string) error {
 	}
 
 	// Strip secrets before export
-	clean := make(map[string]data.Profile, len(d.Profiles))
-	for name, p := range d.Profiles {
+	clean := make(map[string]data.Profile, len(d.Entries))
+	for name, p := range d.Entries {
 		p.Secret = ""
 		clean[name] = p
 	}

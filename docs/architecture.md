@@ -20,6 +20,9 @@ autopass is a CLI tool that wraps interactive commands in a pseudo-terminal, wat
 │  run.go:  Decrypt secret, build engine.Options           │
 │  version.go: Print version/commit/build info             │
 │  helpers.go: Load data, derive encryption key            │
+│              ├─ Check keychain cache (OS keyring)         │
+│              ├─ SSH mode: HKDF derive → cache key         │
+│              └─ KMS mode: KMS Decrypt(encrypted DEK)      │
 └─────────────────────┬───────────────────────────────────┘
                       │
                       ▼
@@ -104,28 +107,53 @@ Goroutine 2: pipeReader → stdout + pattern matching
 
 ### Crypto (`internal/crypto/`)
 
+#### Encryption Modes
+
+autopass supports two encryption paths:
+
+1. **SSH-derived (default)** — Key derived from local SSH private key via HKDF. No network calls, works offline.
+2. **KMS envelope (team/enterprise)** — AWS KMS generates a data encryption key (DEK). Encrypted DEK stored alongside ciphertext.
+
 ```
-SSH Private Key File
-       │
-       ├─ Parse with ssh.ParseRawPrivateKey()
-       │   (supports ed25519, RSA, ECDSA; passphrase-protected keys)
-       │
-       ▼
-   Raw key bytes
-       │
-       ├─ HKDF-SHA256
-       │   Salt: "autopass-salt-v1"
-       │   Info: "autopass-v1"
-       │
-       ▼
-   256-bit AES key (derived, never stored)
-       │
-       ├─ Encrypt: AES-256-GCM (random 12-byte nonce)
-       │   Output: nonce || ciphertext || tag
-       │
-       └─ Decrypt: AES-256-GCM
-           Input: nonce || ciphertext || tag
-           Output: plaintext secret
+┌─────────────── Mode 1: SSH-Derived ────────────────┐
+│                                                     │
+│  SSH Private Key File                               │
+│         │                                           │
+│         ├─ Parse with ssh.ParseRawPrivateKey()      │
+│         │                                           │
+│         ▼                                           │
+│     Raw key bytes                                   │
+│         │                                           │
+│         ├─ HKDF-SHA256                              │
+│         │   Salt: "autopass-salt-v1"                │
+│         │   Info: "autopass-v1"                     │
+│         ▼                                           │
+│     256-bit AES key                                 │
+│         │                                           │
+│         ├──► Keychain Cache (OS keyring, 1h TTL)    │
+│         │    (skip HKDF on subsequent runs)         │
+│         │                                           │
+│         ├─ Encrypt: AES-256-GCM (random nonce)     │
+│         └─ Decrypt: AES-256-GCM                    │
+│                                                     │
+└─────────────────────────────────────────────────────┘
+
+┌─────────────── Mode 2: KMS Envelope ───────────────┐
+│                                                     │
+│  AWS KMS Key ARN                                    │
+│         │                                           │
+│         ├─ GenerateDataKey (AES-256)                │
+│         │   Returns: plaintext DEK + encrypted DEK  │
+│         ▼                                           │
+│     Plaintext DEK (in-memory only)                  │
+│         │                                           │
+│         ├─ Encrypt: AES-256-GCM (random nonce)     │
+│         │   Store: encrypted DEK + nonce + cipher   │
+│         │                                           │
+│         ├─ Decrypt: KMS Decrypt(encrypted DEK)      │
+│         │   → plaintext DEK → AES-256-GCM decrypt  │
+│         │                                           │
+└─────────────────────────────────────────────────────┘
 ```
 
 ### Data (`internal/data/`)
@@ -191,12 +219,13 @@ PTY Output (raw bytes)
 ## Security Model
 
 1. **No plaintext secrets on disk** — all secrets encrypted with AES-256-GCM
-2. **Key derived from SSH key** — no separate master password; leverages existing SSH key management
-3. **Key never stored** — derived on-the-fly each invocation via HKDF
+2. **Two encryption modes** — SSH key derivation (offline, single-user) or KMS envelope encryption (team/enterprise, IAM-controlled)
+3. **Key never stored in plaintext** — SSH-derived key cached in OS keychain (1h TTL) or held in-memory only (KMS mode)
 4. **Per-secret nonce** — each encryption uses a unique random nonce
-5. **File permissions** — data.json created with 0600 (owner read/write only)
-6. **Hidden input** — secrets read via `term.ReadPassword()` (no echo)
-7. **Hidden response** — when `hidden: true`, the response is not echoed to terminal output
+5. **Keychain cache** — derived AES key cached per-profile in OS keyring (macOS Keychain, Linux secret-service, Windows Credential Manager); bypass with `--no-cache`
+6. **File permissions** — data.json created with 0600 (owner read/write only)
+7. **Hidden input** — secrets read via `term.ReadPassword()` (no echo)
+8. **Hidden response** — when `hidden: true`, the response is not echoed to terminal output
 
 ## Concurrency Model
 
