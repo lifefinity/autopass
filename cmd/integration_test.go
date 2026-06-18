@@ -20,8 +20,8 @@ func setupTestData(t *testing.T) (string, func()) {
 	}
 
 	d := &data.Data{
-		SSHKey: filepath.Join(dir, "fake_key"),
-		Profiles: map[string]data.Profile{
+		Config: data.Config{KeyFile: filepath.Join(dir, "fake_key")},
+		Profiles: data.Profiles{Entries: map[string]data.Profile{
 			"myserver": {
 				Command:     "ssh user@host",
 				Description: "Production SSH",
@@ -39,7 +39,7 @@ func setupTestData(t *testing.T) (string, func()) {
 				Timeout:     data.Duration{Duration: 60 * time.Second},
 				Steps:       []string{"\\timing on", "SELECT 1;"},
 			},
-		},
+		}},
 	}
 
 	raw, _ := json.MarshalIndent(d, "", "  ")
@@ -59,11 +59,11 @@ func TestDataLoad_Integration(t *testing.T) {
 		t.Fatalf("Load failed: %v", err)
 	}
 
-	if len(d.Profiles) != 2 {
-		t.Fatalf("expected 2 profiles, got %d", len(d.Profiles))
+	if len(d.Entries) != 2 {
+		t.Fatalf("expected 2 profiles, got %d", len(d.Entries))
 	}
 
-	p := d.Profiles["myserver"]
+	p := d.Entries["myserver"]
 	if p.Command != "ssh user@host" {
 		t.Errorf("unexpected command: %s", p.Command)
 	}
@@ -101,15 +101,15 @@ func TestDataAddRemove_Integration(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load after add failed: %v", err)
 	}
-	if len(d2.Profiles) != 3 {
-		t.Fatalf("expected 3 profiles, got %d", len(d2.Profiles))
+	if len(d2.Entries) != 3 {
+		t.Fatalf("expected 3 profiles, got %d", len(d2.Entries))
 	}
-	if d2.Profiles["redis"].Command != "redis-cli -h cache.example.com" {
-		t.Fatalf("unexpected redis command: %s", d2.Profiles["redis"].Command)
+	if d2.Entries["redis"].Command != "redis-cli -h cache.example.com" {
+		t.Fatalf("unexpected redis command: %s", d2.Entries["redis"].Command)
 	}
 
 	// Remove
-	if err := d2.RemoveProfile("redis"); err != nil {
+	if err := d2.RemoveProfile("redis", ""); err != nil {
 		t.Fatalf("RemoveProfile failed: %v", err)
 	}
 	if err := data.Save(path, d2); err != nil {
@@ -117,8 +117,8 @@ func TestDataAddRemove_Integration(t *testing.T) {
 	}
 
 	d3, _ := data.Load(path)
-	if len(d3.Profiles) != 2 {
-		t.Fatalf("expected 2 profiles after remove, got %d", len(d3.Profiles))
+	if len(d3.Entries) != 2 {
+		t.Fatalf("expected 2 profiles after remove, got %d", len(d3.Entries))
 	}
 }
 
@@ -132,9 +132,9 @@ func TestDataUpdate_Integration(t *testing.T) {
 	}
 
 	// Update command field
-	p := d.Profiles["myserver"]
+	p := d.Entries["myserver"]
 	p.Command = "ssh newuser@newhost"
-	d.Profiles["myserver"] = p
+	d.Entries["myserver"] = p
 
 	if err := data.Save(path, d); err != nil {
 		t.Fatalf("Save failed: %v", err)
@@ -142,19 +142,19 @@ func TestDataUpdate_Integration(t *testing.T) {
 
 	// Reload and verify
 	d2, _ := data.Load(path)
-	if d2.Profiles["myserver"].Command != "ssh newuser@newhost" {
-		t.Fatalf("update not persisted: %s", d2.Profiles["myserver"].Command)
+	if d2.Entries["myserver"].Command != "ssh newuser@newhost" {
+		t.Fatalf("update not persisted: %s", d2.Entries["myserver"].Command)
 	}
 	// Other fields unchanged
-	if d2.Profiles["myserver"].Patterns[0].Match != "(?i)password:" {
-		t.Fatalf("pattern should be unchanged: %s", d2.Profiles["myserver"].Patterns[0].Match)
+	if d2.Entries["myserver"].Patterns[0].Match != "(?i)password:" {
+		t.Fatalf("pattern should be unchanged: %s", d2.Entries["myserver"].Patterns[0].Match)
 	}
 }
 
 func TestDataReservedNames_Integration(t *testing.T) {
 	reserved := []string{"init", "add", "update", "list", "remove", "version", "help"}
 
-	d := &data.Data{Profiles: make(map[string]data.Profile)}
+	d := &data.Data{Profiles: data.Profiles{Entries: make(map[string]data.Profile)}}
 
 	for _, name := range reserved {
 		err := d.AddProfile(name, data.Profile{Command: "test"})
@@ -190,21 +190,21 @@ func TestProfileFields_Integration(t *testing.T) {
 	}
 
 	// Verify Description
-	if d.Profiles["myserver"].Description != "Production SSH" {
-		t.Errorf("expected description 'Production SSH', got %q", d.Profiles["myserver"].Description)
+	if d.Entries["myserver"].Description != "Production SSH" {
+		t.Errorf("expected description 'Production SSH', got %q", d.Entries["myserver"].Description)
 	}
 
 	// Verify Steps
-	if len(d.Profiles["mydb"].Steps) != 2 {
-		t.Fatalf("expected 2 steps, got %d", len(d.Profiles["mydb"].Steps))
+	if len(d.Entries["mydb"].Steps) != 2 {
+		t.Fatalf("expected 2 steps, got %d", len(d.Entries["mydb"].Steps))
 	}
-	if d.Profiles["mydb"].Steps[0] != "\\timing on" {
-		t.Errorf("unexpected step[0]: %s", d.Profiles["mydb"].Steps[0])
+	if d.Entries["mydb"].Steps[0] != "\\timing on" {
+		t.Errorf("unexpected step[0]: %s", d.Entries["mydb"].Steps[0])
 	}
 
 	// Verify After
-	if len(d.Profiles["myserver"].After) != 1 || d.Profiles["myserver"].After[0] != "echo done" {
-		t.Errorf("unexpected after: %v", d.Profiles["myserver"].After)
+	if len(d.Entries["myserver"].After) != 1 || d.Entries["myserver"].After[0] != "echo done" {
+		t.Errorf("unexpected after: %v", d.Entries["myserver"].After)
 	}
 }
 

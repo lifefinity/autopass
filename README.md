@@ -76,6 +76,17 @@ autopass myserver
     └─ Process exits normally
 ```
 
+### KMS Mode (Team/Enterprise)
+
+When a profile has `--kms-key-id` set, autopass uses AWS KMS envelope encryption instead of SSH key derivation:
+
+```
+autopass myserver
+    ├─ Call KMS GenerateDataKey -> get plaintext DEK + encrypted DEK
+    ├─ Encrypt secret with DEK (AES-256-GCM)
+    └─ Store encrypted DEK + ciphertext together
+```
+
 ## Examples
 
 ### Common Profiles
@@ -165,7 +176,7 @@ autopass mydb --script queries.sql > result.txt
 
 | Command | Description |
 |---------|-------------|
-| `autopass <profile>` | Run a profile with auto-answering |
+| `autopass <profile> [-s service]` | Run a profile with auto-answering |
 | `autopass add <profile>` | Create a new profile |
 | `autopass update <profile>` | Update specific fields of a profile |
 | `autopass list` | Show all profiles |
@@ -184,6 +195,63 @@ autopass mydb --script queries.sql > result.txt
 - **Case-insensitive by default** — `"password:"` matches `Password:`, `PASSWORD:`, etc.
 - Use `--case-sensitive` flag when adding/updating a profile for exact case matching
 - Patterns are Go regular expressions (e.g. `"password|passphrase"` matches either)
+
+## Multi-Service Profiles
+
+When a server has multiple services (SSH, PostgreSQL, Oracle, etc.), use `-s` to disambiguate:
+
+```bash
+# Add multiple services for the same server
+autopass add -c "ssh admin@prod" -m "password:" prod -s ssh
+autopass add -c "psql -h prod -U admin" -m "password" prod -s pg
+autopass add -c "sqlplus admin@prod-orcl" -m "password:" prod -s oracle
+
+# Run -- if name is unique, runs directly
+autopass prod              # multiple matches -> shows selection menu
+autopass prod -s ssh       # exact match -> runs directly
+
+# List shows service column
+autopass list
+# NAME   SERVICE   COMMAND                          DESCRIPTION
+# prod   ssh       ssh admin@prod                   ...
+# prod   pg        psql -h prod -U admin            ...
+# prod   oracle    sqlplus admin@prod-orcl           ...
+```
+
+Uniqueness is enforced on `(name, service)` pairs. Profiles without `-s` have an empty service field.
+
+## Keychain Cache
+
+autopass caches the derived AES encryption key in your OS keychain (macOS Keychain, Linux secret-service, Windows Credential Manager) to avoid re-reading the SSH key on every run.
+
+- Cache TTL: 1 hour (auto-expires)
+- Per-profile isolation (each profile caches independently)
+- Disable with `--no-cache` flag
+
+```bash
+autopass prod              # first run: reads SSH key, caches derived key
+autopass prod              # subsequent: uses cached key (faster)
+autopass prod --no-cache   # bypass cache, re-derive from SSH key
+```
+
+## KMS Envelope Encryption
+
+For team/enterprise use, autopass supports AWS KMS envelope encryption. Instead of deriving keys from a local SSH key, KMS generates and manages data encryption keys.
+
+```bash
+# Add a profile with KMS encryption
+autopass add -c "ssh admin@prod" -m "password:" prod --kms-key-id arn:aws:kms:us-east-1:123456:key/abc-def
+
+# Existing profiles: switch to KMS
+autopass update prod --kms-key-id arn:aws:kms:us-east-1:123456:key/abc-def
+
+# Run as normal -- KMS decryption is transparent
+autopass prod
+```
+
+Requirements:
+- AWS credentials configured (`~/.aws/credentials` or environment)
+- IAM permissions: `kms:GenerateDataKey`, `kms:Decrypt` on the specified key
 
 ## Backup & Restore
 

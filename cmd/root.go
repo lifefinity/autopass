@@ -16,6 +16,7 @@ var rootCmd = &cobra.Command{
 
 Run a profile:
   autopass <profile>              Run with auto-answering
+  autopass <profile> -s <service> Run specific service profile
   autopass <profile> --then "cmd" Execute command after login
   autopass <profile> --script f   Execute commands from file after login
   autopass <profile> --prompt "x" Override shell prompt pattern
@@ -28,7 +29,8 @@ Examples:
   autopass mydb --then "SELECT now();"       # Run SQL after connecting
   autopass prod --script deploy.sh           # Run script after login
   autopass mydb --then "\timing" --then "\q" # Chain multiple commands
-  autopass deploy -e HOST=prod.example.com   # Inject env var`,
+  autopass deploy -e HOST=prod.example.com   # Inject env var
+  autopass mydb -s staging                   # Run the 'staging' service variant`,
 	Version: Version,
 	Args:    cobra.ArbitraryArgs,
 	ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
@@ -47,7 +49,11 @@ Examples:
 	},
 }
 
+var serviceFlag string
+
 func Execute() {
+	rootCmd.PersistentFlags().BoolVar(&noCache, "no-cache", false, "bypass keychain cache for key derivation")
+	rootCmd.PersistentFlags().StringVarP(&serviceFlag, "service", "s", "", "service name for profile disambiguation")
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)

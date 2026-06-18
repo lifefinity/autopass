@@ -10,11 +10,10 @@ import (
 	"golang.org/x/term"
 
 	"github.com/lifefinity/autopass/internal/crypto"
-	"github.com/lifefinity/autopass/internal/data"
 )
 
 var changeKeyCmd = &cobra.Command{
-	Use:   "change-key <new-ssh-key-path>",
+	Use:   "change-key <new-key-path>",
 	Short: "Switch to a new SSH key for encryption",
 	Long: `Re-encrypt all secrets with a new SSH key.
 
@@ -40,19 +39,14 @@ func runChangeKey(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("new key not found: %w", err)
 	}
 
-	path, err := dataPath()
+	d, err := loadData()
 	if err != nil {
 		return err
 	}
 
-	d, err := data.Load(path)
-	if err != nil {
-		return fmt.Errorf("loading data: %w", err)
-	}
-
 	// Derive old key
-	fmt.Printf("Enter passphrase for current key (%s): ", d.SSHKey)
-	oldKey, err := deriveKeyFromPath(d.SSHKey)
+	fmt.Printf("Enter passphrase for current key file (%s): ", d.KeyFile)
+	oldKey, err := deriveKeyFromPath(d.KeyFile)
 	if err != nil {
 		return fmt.Errorf("deriving current key: %w", err)
 	}
@@ -68,7 +62,7 @@ func runChangeKey(cmd *cobra.Command, args []string) error {
 
 	// Re-encrypt all secrets
 	count := 0
-	for name, profile := range d.Profiles {
+	for name, profile := range d.Entries {
 		if profile.Secret == "" {
 			continue
 		}
@@ -78,18 +72,18 @@ func runChangeKey(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("decoding secret for %q: %w", name, err)
 		}
 
-		plaintext, err := crypto.Decrypt(oldKey, ciphertext)
+		plaintext, err := crypto.Decrypt(oldKey, ciphertext, []byte(name))
 		if err != nil {
 			return fmt.Errorf("decrypting secret for %q: %w", name, err)
 		}
 
-		newCiphertext, err := crypto.Encrypt(newKey, plaintext)
+		newCiphertext, err := crypto.Encrypt(newKey, plaintext, []byte(name))
 		if err != nil {
 			return fmt.Errorf("re-encrypting secret for %q: %w", name, err)
 		}
 
 		profile.Secret = base64.StdEncoding.EncodeToString(newCiphertext)
-		d.Profiles[name] = profile
+		d.Entries[name] = profile
 		count++
 	}
 
@@ -97,17 +91,17 @@ func runChangeKey(cmd *cobra.Command, args []string) error {
 	home, _ := os.UserHomeDir()
 	absPath, _ := filepath.Abs(newKeyPath)
 	if rel, err := filepath.Rel(home, absPath); err == nil && len(rel) > 0 && rel[0] != '.' {
-		d.SSHKey = "~/" + rel
+		d.KeyFile = "~/" + rel
 	} else {
-		d.SSHKey = absPath
+		d.KeyFile = absPath
 	}
 
-	if err := data.Save(path, d); err != nil {
+	if err := saveData(d); err != nil {
 		return fmt.Errorf("saving data: %w", err)
 	}
 
 	fmt.Printf("✓ Re-encrypted %d profile(s) with new key\n", count)
-	fmt.Printf("  Key: %s\n", d.SSHKey)
+	fmt.Printf("  Key: %s\n", d.KeyFile)
 	return nil
 }
 
