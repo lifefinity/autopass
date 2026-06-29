@@ -8,7 +8,7 @@ require (
 	github.com/creack/pty v1.1.24
 	github.com/spf13/cobra v1.10.2
 	github.com/zalando/go-keyring v0.2.8
-	golang.org/x/crypto v0.52.0
+	golang.org/x/crypto v0.53.0
 	golang.org/x/term v0.44.0
 )
 
