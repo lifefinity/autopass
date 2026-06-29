@@ -14,8 +14,8 @@ func TestCompletionBash(t *testing.T) {
 	if buf.Len() == 0 {
 		t.Fatal("expected bash completion output, got empty")
 	}
-	if !strings.Contains(buf.String(), "autopass") {
-		t.Fatal("bash completion does not reference autopass")
+	if !strings.Contains(buf.String(), "passauto") {
+		t.Fatal("bash completion does not reference passauto")
 	}
 }
 
@@ -27,7 +27,7 @@ func TestCompletionZsh(t *testing.T) {
 	if buf.Len() == 0 {
 		t.Fatal("expected zsh completion output, got empty")
 	}
-	if !strings.Contains(buf.String(), "#compdef autopass") {
+	if !strings.Contains(buf.String(), "#compdef passauto") {
 		t.Fatal("zsh completion missing compdef header")
 	}
 }
@@ -40,8 +40,8 @@ func TestCompletionFish(t *testing.T) {
 	if buf.Len() == 0 {
 		t.Fatal("expected fish completion output, got empty")
 	}
-	if !strings.Contains(buf.String(), "autopass") {
-		t.Fatal("fish completion does not reference autopass")
+	if !strings.Contains(buf.String(), "passauto") {
+		t.Fatal("fish completion does not reference passauto")
 	}
 }
 

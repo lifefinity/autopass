@@ -9,8 +9,8 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 
-	"github.com/lifefinity/autopass/internal/crypto"
-	"github.com/lifefinity/autopass/internal/data"
+	"github.com/lifefinity/passauto/internal/crypto"
+	"github.com/lifefinity/passauto/internal/data"
 )
 
 var (
@@ -34,16 +34,16 @@ unspecified fields remain unchanged.
 
 Examples:
   # Update only the secret
-  autopass update mwinit --secret
+  passauto update mwinit --secret
 
   # Update the command
-  autopass update mwinit -c "mwinit -s -o -f"
+  passauto update mwinit -c "mwinit -s -o -f"
 
   # Update match pattern and timeout
-  autopass update mwinit -m "PIN:" -t 60s
+  passauto update mwinit -m "PIN:" -t 60s
 
   # Update multiple fields at once
-  autopass update myserver -c "ssh newuser@host" -m "password:" --secret`,
+  passauto update myserver -c "ssh newuser@host" -m "password:" --secret`,
 	Args: cobra.ExactArgs(1),
 	ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) != 0 {

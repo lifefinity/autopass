@@ -9,8 +9,8 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 
-	"github.com/lifefinity/autopass/internal/crypto"
-	"github.com/lifefinity/autopass/internal/data"
+	"github.com/lifefinity/passauto/internal/crypto"
+	"github.com/lifefinity/passauto/internal/data"
 )
 
 var (
@@ -21,21 +21,21 @@ var (
 
 var initCmd = &cobra.Command{
 	Use:   "init",
-	Short: "Initialize autopass (first-time setup)",
-	Long: `Initialize autopass with an encryption key.
+	Short: "Initialize passauto (first-time setup)",
+	Long: `Initialize passauto with an encryption key.
 
 Key selection (in order of priority):
   1. --key <path>     Use a specific SSH private key
   2. ~/.ssh/          Auto-detect: id_ed25519 > id_rsa > id_ecdsa
-  3. (none found)     Generate a dedicated key at ~/.autopass/autopass_key
+  3. (none found)     Generate a dedicated key at ~/.passauto/passauto_key
 
 If the selected key is passphrase-protected, you will be prompted once
-to verify access. Subsequent 'autopass' runs will also prompt if needed.
+to verify access. Subsequent 'passauto' runs will also prompt if needed.
 
 Examples:
-  autopass init                          # Auto-detect or generate
-  autopass init --key ~/.ssh/id_rsa      # Use a specific key
-  autopass init --no-passphrase          # Generate key without passphrase`,
+  passauto init                          # Auto-detect or generate
+  passauto init --key ~/.ssh/id_rsa      # Use a specific key
+  passauto init --no-passphrase          # Generate key without passphrase`,
 	RunE: runInit,
 }
 
@@ -52,17 +52,17 @@ func runInit(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("getting home directory: %w", err)
 	}
 
-	autopassDir := filepath.Join(home, ".autopass")
-	cfgPath := filepath.Join(autopassDir, "config.json")
+	passautoDir := filepath.Join(home, ".passauto")
+	cfgPath := filepath.Join(passautoDir, "config.json")
 
 	if _, err := os.Stat(cfgPath); err == nil {
-		fmt.Println("autopass is already initialized. Config at:", cfgPath)
+		fmt.Println("passauto is already initialized. Config at:", cfgPath)
 		return nil
 	}
 	// Also check legacy
-	legacyPath := filepath.Join(autopassDir, "data.json")
+	legacyPath := filepath.Join(passautoDir, "data.json")
 	if _, err := os.Stat(legacyPath); err == nil {
-		fmt.Println("autopass is already initialized (legacy format). Data at:", legacyPath)
+		fmt.Println("passauto is already initialized (legacy format). Data at:", legacyPath)
 		return nil
 	}
 
@@ -84,7 +84,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 		}
 
 		fmt.Println("Initialized with key-command. Config at:", cfgPath)
-		fmt.Println("Next: run 'autopass add <name>' to store a secret.")
+		fmt.Println("Next: run 'passauto add <name>' to store a secret.")
 		return nil
 	}
 
@@ -97,8 +97,8 @@ func runInit(cmd *cobra.Command, args []string) error {
 	}
 
 	if keyFile == "" {
-		// No SSH key found — generate a dedicated autopass key
-		keyFile = filepath.Join(autopassDir, "autopass_key")
+		// No SSH key found — generate a dedicated passauto key
+		keyFile = filepath.Join(passautoDir, "passauto_key")
 
 		var passphrase []byte
 		if !initNoPassphrase {
@@ -108,7 +108,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 			}
 		}
 
-		fmt.Println("Generating autopass encryption key...")
+		fmt.Println("Generating passauto encryption key...")
 		if err := crypto.GenerateKey(keyFile, passphrase); err != nil {
 			return fmt.Errorf("generating key: %w", err)
 		}
@@ -146,7 +146,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 	}
 
 	fmt.Println("Initialized. Config at:", cfgPath)
-	fmt.Println("Next: run 'autopass add <name>' to store a secret.")
+	fmt.Println("Next: run 'passauto add <name>' to store a secret.")
 	return nil
 }
 

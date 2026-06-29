@@ -1,14 +1,14 @@
-# autopass
+# passauto
 
 自动应答交互式密码提示（密码、PIN、口令）的命令行工具。类似 `expect`，但更简单，且内置加密密钥管理。
 
 [English](README.md)
 
-## 为什么选 autopass？
+## 为什么选 passauto？
 
 | 工具 | 脚本 | 密钥存储 | 跨平台 | 学习成本 |
 |------|------|----------|--------|----------|
-| **autopass** | 无需脚本，一行命令 | AES-256-GCM，从 SSH key 派生 | Windows + Linux + macOS | 极低 |
+| **passauto** | 无需脚本，一行命令 | AES-256-GCM，从 SSH key 派生 | Windows + Linux + macOS | 极低 |
 | expect/pexpect | TCL/Python 脚本 | 无（明文写在脚本里） | 仅 Linux/macOS | 中等 |
 | sshpass | 单条命令 | 明文参数或环境变量 | 仅 Linux | 低 |
 | ansible vault | Playbook 级别 | 加密 vault | 通过 Ansible | 高 |
@@ -17,49 +17,49 @@
 
 ### 下载二进制
 
-从 [Releases](https://github.com/lifefinity/autopass/releases/latest) 下载：
+从 [Releases](https://github.com/lifefinity/passauto/releases/latest) 下载：
 
 ```bash
 # Linux (amd64)
-curl -sL https://github.com/lifefinity/autopass/releases/latest/download/autopass-linux-amd64 -o autopass
-chmod +x autopass && sudo mv autopass /usr/local/bin/
+curl -sL https://github.com/lifefinity/passauto/releases/latest/download/passauto-linux-amd64 -o passauto
+chmod +x passauto && sudo mv passauto /usr/local/bin/
 
 # macOS (Apple Silicon)
-curl -sL https://github.com/lifefinity/autopass/releases/latest/download/autopass-darwin-arm64 -o autopass
-chmod +x autopass && sudo mv autopass /usr/local/bin/
+curl -sL https://github.com/lifefinity/passauto/releases/latest/download/passauto-darwin-arm64 -o passauto
+chmod +x passauto && sudo mv passauto /usr/local/bin/
 
-# Windows — 从 Releases 页面下载 autopass-windows-amd64.exe
+# Windows — 从 Releases 页面下载 passauto-windows-amd64.exe
 ```
 
 ### 从源码编译
 
 ```bash
-git clone https://github.com/lifefinity/autopass.git
-cd autopass && make build
+git clone https://github.com/lifefinity/passauto.git
+cd passauto && make build
 ```
 
 ## 快速开始
 
 ```bash
 # 编译
-make build    # → bin/autopass.exe
+make build    # → bin/passauto.exe
 
 # 1. 添加 profile
-autopass add -c "ssh user@server" -m "password:" -d "生产服务器" myserver
+passauto add -c "ssh user@server" -m "password:" -d "生产服务器" myserver
 
 # 2. 运行 — 密码自动填充
-autopass myserver
+passauto myserver
 
 # 3. 查看已有配置
-autopass list
+passauto list
 ```
 
 ## 工作原理
 
 ```
-autopass myserver
+passauto myserver
     │
-    ├─ 从 ~/.autopass/data.json 加载 profile
+    ├─ 从 ~/.passauto/data.json 加载 profile
     ├─ 从 SSH 私钥派生 AES 密钥 (HKDF-SHA256)
     ├─ 解密存储的 secret
     ├─ 在伪终端中启动命令
@@ -69,10 +69,10 @@ autopass myserver
 
 ### KMS 模式（团队/企业）
 
-当 profile 设置了 `--kms-key-id` 时，autopass 使用 AWS KMS 信封加密代替 SSH 密钥派生：
+当 profile 设置了 `--kms-key-id` 时，passauto 使用 AWS KMS 信封加密代替 SSH 密钥派生：
 
 ```
-autopass myserver
+passauto myserver
     ├─ 调用 KMS GenerateDataKey -> 获取明文 DEK + 加密 DEK
     ├─ 使用 DEK 加密 secret (AES-256-GCM)
     └─ 存储加密 DEK + 密文
@@ -84,22 +84,22 @@ autopass myserver
 
 ```bash
 # SSH 服务器
-autopass add -c "ssh deploy@prod-server" -m "password:" -d "生产部署" prod
+passauto add -c "ssh deploy@prod-server" -m "password:" -d "生产部署" prod
 
 # PostgreSQL
-autopass add -c "psql -h db.example.com -U admin mydb" -m "password" -p "=>\s*$" -d "主数据库" mydb
+passauto add -c "psql -h db.example.com -U admin mydb" -m "password" -p "=>\s*$" -d "主数据库" mydb
 
 # MySQL
-autopass add -c "mysql -h db.example.com -u root -p" -m "password:" -d "MySQL 生产" mysql-prod
+passauto add -c "mysql -h db.example.com -u root -p" -m "password:" -d "MySQL 生产" mysql-prod
 
 # Sudo
-autopass add -c "sudo apt upgrade -y" -m "password" -d "系统更新" apt-upgrade
+passauto add -c "sudo apt upgrade -y" -m "password" -d "系统更新" apt-upgrade
 
 # Kerberos
-autopass add -c "kinit admin@EXAMPLE.COM" -m "password for" -d "Kerberos 认证" krb
+passauto add -c "kinit admin@EXAMPLE.COM" -m "password for" -d "Kerberos 认证" krb
 
 # Midway (Amazon)
-autopass add -c "kinit admin@CORP.COM" -m "Password:" --after "klist" -d "Kerberos 认证" krb
+passauto add -c "kinit admin@CORP.COM" -m "Password:" --after "klist" -d "Kerberos 认证" krb
 ```
 
 ### 登录后执行命令 (--then)
@@ -108,13 +108,13 @@ autopass add -c "kinit admin@CORP.COM" -m "Password:" --after "klist" -d "Kerber
 
 ```bash
 # 连接后执行 SQL
-autopass mydb --then "SELECT now();" --then "\q"
+passauto mydb --then "SELECT now();" --then "\q"
 
 # 从文件执行
-autopass mydb --script queries.sql
+passauto mydb --script queries.sql
 
 # 组合使用
-autopass mydb --then "\timing on" --script queries.sql --then "\q"
+passauto mydb --then "\timing on" --script queries.sql --then "\q"
 ```
 
 ### 退出后执行命令 (--after)
@@ -123,53 +123,53 @@ autopass mydb --then "\timing on" --script queries.sql --then "\q"
 
 ```bash
 # kinit 完成后显示凭据
-autopass krb --after "klist"
+passauto krb --after "klist"
 
 # SSH 退出后同步文件
-autopass prod --after "rsync -a ./dist/ server:/app/"
+passauto prod --after "rsync -a ./dist/ server:/app/"
 ```
 
 ### 注入环境变量 (--env / -e)
 
 ```bash
-autopass deploy -e HOST=prod.example.com -e PORT=5432
+passauto deploy -e HOST=prod.example.com -e PORT=5432
 ```
 
 ### 更新 Profile
 
 ```bash
-autopass update prod --secret                    # 更换密码
-autopass update prod -c "ssh newuser@host"       # 更换命令
-autopass update prod -d "新的描述"                # 更换描述
-autopass update mydb --then "\timing on"         # 设置登录后步骤
-autopass update krb --after "klist"            # 设置退出后命令
-autopass update mysql-prod -m "password:" -t 60s # 更换匹配和超时
+passauto update prod --secret                    # 更换密码
+passauto update prod -c "ssh newuser@host"       # 更换命令
+passauto update prod -d "新的描述"                # 更换描述
+passauto update mydb --then "\timing on"         # 设置登录后步骤
+passauto update krb --after "klist"            # 设置退出后命令
+passauto update mysql-prod -m "password:" -t 60s # 更换匹配和超时
 ```
 
 ### 静默模式
 
 ```bash
-autopass mydb --quiet --script queries.sql    # 无终端输出
-autopass mydb -q --then "SELECT 1;"           # 短写
+passauto mydb --quiet --script queries.sql    # 无终端输出
+passauto mydb -q --then "SELECT 1;"           # 短写
 ```
 
 ## 命令一览
 
 | 命令 | 说明 |
 |------|------|
-| `autopass <profile> [-s service]` | 运行 profile，自动应答 |
-| `autopass add <profile>` | 创建新 profile |
-| `autopass update <profile>` | 更新 profile 字段 |
-| `autopass list` | 列出所有 profile |
-| `autopass remove <profile>` | 删除 profile |
-| `autopass change-key <path>` | 更换加密 SSH key |
-| `autopass export <file>` | 导出 profile（不含密码） |
-| `autopass import <file>` | 导入 profile |
-| `autopass backup <dir>` | 备份密钥和数据 |
-| `autopass restore <dir>` | 恢复密钥和数据 |
-| `autopass completion <shell>` | 生成 shell 补全脚本 |
-| `autopass version` | 版本信息 |
-| `autopass init` | 首次初始化 |
+| `passauto <profile> [-s service]` | 运行 profile，自动应答 |
+| `passauto add <profile>` | 创建新 profile |
+| `passauto update <profile>` | 更新 profile 字段 |
+| `passauto list` | 列出所有 profile |
+| `passauto remove <profile>` | 删除 profile |
+| `passauto change-key <path>` | 更换加密 SSH key |
+| `passauto export <file>` | 导出 profile（不含密码） |
+| `passauto import <file>` | 导入 profile |
+| `passauto backup <dir>` | 备份密钥和数据 |
+| `passauto restore <dir>` | 恢复密钥和数据 |
+| `passauto completion <shell>` | 生成 shell 补全脚本 |
+| `passauto version` | 版本信息 |
+| `passauto init` | 首次初始化 |
 
 ## --then 与 --after 的区别
 
@@ -190,7 +190,7 @@ autopass mydb -q --then "SELECT 1;"           # 短写
 ## 更换加密密钥
 
 ```bash
-autopass change-key ~/.ssh/id_ed25519_new
+passauto change-key ~/.ssh/id_ed25519_new
 ```
 
 用旧 key 解密所有 secret，用新 key 重新加密。两个 key 都可以有密码保护。
@@ -201,16 +201,16 @@ autopass change-key ~/.ssh/id_ed25519_new
 
 ```bash
 # 为同一服务器添加多个服务
-autopass add -c "ssh admin@prod" -m "password:" prod -s ssh
-autopass add -c "psql -h prod -U admin" -m "password" prod -s pg
-autopass add -c "sqlplus admin@prod-orcl" -m "password:" prod -s oracle
+passauto add -c "ssh admin@prod" -m "password:" prod -s ssh
+passauto add -c "psql -h prod -U admin" -m "password" prod -s pg
+passauto add -c "sqlplus admin@prod-orcl" -m "password:" prod -s oracle
 
 # 运行 -- 名称唯一时直接运行
-autopass prod              # 多个匹配 -> 显示选择菜单
-autopass prod -s ssh       # 精确匹配 -> 直接运行
+passauto prod              # 多个匹配 -> 显示选择菜单
+passauto prod -s ssh       # 精确匹配 -> 直接运行
 
 # list 显示 service 列
-autopass list
+passauto list
 # NAME   SERVICE   COMMAND                          DESCRIPTION
 # prod   ssh       ssh admin@prod                   ...
 # prod   pg        psql -h prod -U admin            ...
@@ -221,31 +221,31 @@ autopass list
 
 ## 钥匙串缓存
 
-autopass 将派生的 AES 加密密钥缓存在操作系统钥匙串中（macOS Keychain、Linux secret-service、Windows Credential Manager），避免每次运行都读取 SSH 密钥。
+passauto 将派生的 AES 加密密钥缓存在操作系统钥匙串中（macOS Keychain、Linux secret-service、Windows Credential Manager），避免每次运行都读取 SSH 密钥。
 
 - 缓存 TTL：1 小时（自动过期）
 - 按 profile 隔离（每个 profile 独立缓存）
 - 使用 `--no-cache` 禁用
 
 ```bash
-autopass prod              # 首次运行：读取 SSH key，缓存派生密钥
-autopass prod              # 后续运行：使用缓存密钥（更快）
-autopass prod --no-cache   # 跳过缓存，重新从 SSH key 派生
+passauto prod              # 首次运行：读取 SSH key，缓存派生密钥
+passauto prod              # 后续运行：使用缓存密钥（更快）
+passauto prod --no-cache   # 跳过缓存，重新从 SSH key 派生
 ```
 
 ## KMS 信封加密
 
-用于团队/企业场景，autopass 支持 AWS KMS 信封加密。不再从本地 SSH 密钥派生，而是由 KMS 生成和管理数据加密密钥。
+用于团队/企业场景，passauto 支持 AWS KMS 信封加密。不再从本地 SSH 密钥派生，而是由 KMS 生成和管理数据加密密钥。
 
 ```bash
 # 使用 KMS 加密添加 profile
-autopass add -c "ssh admin@prod" -m "password:" prod --kms-key-id arn:aws:kms:us-east-1:123456:key/abc-def
+passauto add -c "ssh admin@prod" -m "password:" prod --kms-key-id arn:aws:kms:us-east-1:123456:key/abc-def
 
 # 已有 profile：切换到 KMS
-autopass update prod --kms-key-id arn:aws:kms:us-east-1:123456:key/abc-def
+passauto update prod --kms-key-id arn:aws:kms:us-east-1:123456:key/abc-def
 
 # 正常运行 -- KMS 解密透明进行
-autopass prod
+passauto prod
 ```
 
 要求：
@@ -255,30 +255,30 @@ autopass prod
 ## 备份与恢复
 
 ```bash
-autopass backup /mnt/usb/autopass-backup     # 备份
-autopass restore /mnt/usb/autopass-backup    # 恢复
-autopass restore ~/backup --force            # 覆盖现有数据
+passauto backup /mnt/usb/passauto-backup     # 备份
+passauto restore /mnt/usb/passauto-backup    # 恢复
+passauto restore ~/backup --force            # 覆盖现有数据
 ```
 
 导出/导入（不含密钥，适合共享配置）：
 
 ```bash
-autopass export profiles.json                # 导出（不含 secret）
-autopass import profiles.json                # 导入合并
-autopass import profiles.json --force        # 覆盖同名
+passauto export profiles.json                # 导出（不含 secret）
+passauto import profiles.json                # 导入合并
+passauto import profiles.json --force        # 覆盖同名
 ```
 
 ## Shell 补全
 
 ```bash
 # Bash — 加入 ~/.bashrc
-eval "$(autopass completion bash)"
+eval "$(passauto completion bash)"
 
 # Zsh — 加入 ~/.zshrc
-eval "$(autopass completion zsh)"
+eval "$(passauto completion zsh)"
 
 # Fish
-autopass completion fish > ~/.config/fish/completions/autopass.fish
+passauto completion fish > ~/.config/fish/completions/passauto.fish
 ```
 
 支持 Tab 补全 profile 名称。
@@ -287,8 +287,8 @@ autopass completion fish > ~/.config/fish/completions/autopass.fish
 
 - 使用 **AES-256-GCM** 加密（每个 secret 独立随机 nonce）
 - 加密密钥从 **SSH 私钥** 通过 HKDF-SHA256 派生，不存储在磁盘上
-- 如果没有 SSH key，自动生成 `~/.autopass/autopass_key`（ed25519）
-- 数据文件 `~/.autopass/data.json` 权限为 0600
+- 如果没有 SSH key，自动生成 `~/.passauto/passauto_key`（ed25519）
+- 数据文件 `~/.passauto/data.json` 权限为 0600
 - 任何地方都没有明文 secret
 
 ## 平台支持

@@ -10,9 +10,9 @@
 ## Getting Started
 
 ```bash
-cd projects/autopass
+cd projects/passauto
 go mod download
-go build -o autopass.exe .
+go build -o passauto.exe .
 ```
 
 ## Makefile Targets
@@ -20,7 +20,7 @@ go build -o autopass.exe .
 | Target | Description |
 |--------|-------------|
 | `make deps` | Download and tidy modules |
-| `make build` | Compile to `bin/autopass.exe` |
+| `make build` | Compile to `bin/passauto.exe` |
 | `make run` | Run via `go run` |
 | `make test` | Run all tests with verbose output |
 | `make fmt` | Format code with `go fmt` |
@@ -35,17 +35,17 @@ go build -o autopass.exe .
 ## Project Layout
 
 ```
-autopass/
+passauto/
 ├── main.go                     # Entry point
 ├── cmd/                        # CLI commands (cobra)
 │   ├── root.go                 # Root command + profile dispatch
-│   ├── add.go                  # `autopass add` command
-│   ├── update.go               # `autopass update` command
-│   ├── list.go                 # `autopass list` command
-│   ├── remove.go               # `autopass remove` command
+│   ├── add.go                  # `passauto add` command
+│   ├── update.go               # `passauto update` command
+│   ├── list.go                 # `passauto list` command
+│   ├── remove.go               # `passauto remove` command
 │   ├── run.go                  # runProfile/runProfileWithSteps logic
-│   ├── version.go              # `autopass version` command
-│   ├── init_cmd.go             # `autopass init` setup
+│   ├── version.go              # `passauto version` command
+│   ├── init_cmd.go             # `passauto init` setup
 │   └── helpers.go              # Shared utilities (dataPath, deriveKey, loadData)
 ├── internal/
 │   ├── crypto/                 # Encryption (AES-256-GCM, HKDF key derivation)
@@ -120,11 +120,11 @@ go tool cover -html=coverage.out
 
 ```bash
 # Linux
-GOOS=linux GOARCH=amd64 go build -o bin/autopass .
+GOOS=linux GOARCH=amd64 go build -o bin/passauto .
 
 # macOS
-GOOS=darwin GOARCH=arm64 go build -o bin/autopass .
+GOOS=darwin GOARCH=arm64 go build -o bin/passauto .
 
 # Windows
-GOOS=windows GOARCH=amd64 go build -o bin/autopass.exe .
+GOOS=windows GOARCH=amd64 go build -o bin/passauto.exe .
 ```

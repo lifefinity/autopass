@@ -1,6 +1,6 @@
 package main
 
-import "github.com/lifefinity/autopass/cmd"
+import "github.com/lifefinity/passauto/cmd"
 
 func main() {
 	cmd.Execute()

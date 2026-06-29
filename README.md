@@ -1,23 +1,23 @@
-# autopass
+# passauto
 
-[![CI](https://github.com/lifefinity/autopass/actions/workflows/ci.yml/badge.svg)](https://github.com/lifefinity/autopass/actions/workflows/ci.yml)
-[![CodeQL](https://github.com/lifefinity/autopass/actions/workflows/codeql.yml/badge.svg)](https://github.com/lifefinity/autopass/actions/workflows/codeql.yml)
-[![codecov](https://codecov.io/gh/lifefinity/autopass/graph/badge.svg)](https://codecov.io/gh/lifefinity/autopass)
-[![Go Report Card](https://goreportcard.com/badge/github.com/lifefinity/autopass)](https://goreportcard.com/report/github.com/lifefinity/autopass)
+[![CI](https://github.com/lifefinity/passauto/actions/workflows/ci.yml/badge.svg)](https://github.com/lifefinity/passauto/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/lifefinity/passauto/actions/workflows/codeql.yml/badge.svg)](https://github.com/lifefinity/passauto/actions/workflows/codeql.yml)
+[![codecov](https://codecov.io/gh/lifefinity/passauto/graph/badge.svg)](https://codecov.io/gh/lifefinity/passauto)
+[![Go Report Card](https://goreportcard.com/badge/github.com/lifefinity/passauto)](https://goreportcard.com/report/github.com/lifefinity/passauto)
 
 [中文文档](docs/README_zh.md)
 
 **Encrypted expect in one binary** — auto-answer interactive prompts (passwords, PINs, passphrases) with secrets encrypted at rest.
 
 <p align="center">
-  <img src="demo.svg" alt="autopass demo" width="680">
+  <img src="demo.svg" alt="passauto demo" width="680">
 </p>
 
-## Why autopass?
+## Why passauto?
 
 | Tool | Scripting | Secret Storage | Cross-Platform | Learning Curve |
 |------|-----------|----------------|----------------|----------------|
-| **autopass** | No script needed — one-liner setup | AES-256-GCM, key derived from SSH key | Windows (ConPTY) + Linux/macOS (PTY) | Minimal |
+| **passauto** | No script needed — one-liner setup | AES-256-GCM, key derived from SSH key | Windows (ConPTY) + Linux/macOS (PTY) | Minimal |
 | expect/pexpect | TCL/Python scripts | None (plaintext in scripts) | Linux/macOS only | Moderate |
 | sshpass | Single command only | Plaintext flag or env var | Linux only | Low |
 | ansible vault | Playbook-level | Encrypted vault | Via Ansible | High |
@@ -26,49 +26,49 @@
 
 ### Download Binary
 
-Download the latest release from [Releases](https://github.com/lifefinity/autopass/releases/latest):
+Download the latest release from [Releases](https://github.com/lifefinity/passauto/releases/latest):
 
 ```bash
 # Linux (amd64)
-curl -sL https://github.com/lifefinity/autopass/releases/latest/download/autopass-linux-amd64 -o autopass
-chmod +x autopass && sudo mv autopass /usr/local/bin/
+curl -sL https://github.com/lifefinity/passauto/releases/latest/download/passauto-linux-amd64 -o passauto
+chmod +x passauto && sudo mv passauto /usr/local/bin/
 
 # macOS (Apple Silicon)
-curl -sL https://github.com/lifefinity/autopass/releases/latest/download/autopass-darwin-arm64 -o autopass
-chmod +x autopass && sudo mv autopass /usr/local/bin/
+curl -sL https://github.com/lifefinity/passauto/releases/latest/download/passauto-darwin-arm64 -o passauto
+chmod +x passauto && sudo mv passauto /usr/local/bin/
 
-# Windows — download autopass-windows-amd64.exe from Releases page
+# Windows — download passauto-windows-amd64.exe from Releases page
 ```
 
 ### Build from Source
 
 ```bash
-git clone https://github.com/lifefinity/autopass.git
-cd autopass && make build
+git clone https://github.com/lifefinity/passauto.git
+cd passauto && make build
 ```
 
 ## Quick Start
 
 ```bash
 # Build
-make build    # → bin/autopass.exe (with version info)
+make build    # → bin/passauto.exe (with version info)
 
 # 1. Add a profile
-autopass add -c "ssh user@server" -m "password:" myserver
+passauto add -c "ssh user@server" -m "password:" myserver
 
 # 2. Run it — password auto-filled
-autopass myserver
+passauto myserver
 
 # 3. Check what you have
-autopass list
+passauto list
 ```
 
 ## How It Works
 
 ```
-autopass myserver
+passauto myserver
     │
-    ├─ Load profile from ~/.autopass/data.json
+    ├─ Load profile from ~/.passauto/data.json
     ├─ Derive AES key from SSH private key (HKDF-SHA256)
     ├─ Decrypt stored secret
     ├─ Launch command in pseudo-terminal
@@ -78,10 +78,10 @@ autopass myserver
 
 ### KMS Mode (Team/Enterprise)
 
-When a profile has `--kms-key-id` set, autopass uses AWS KMS envelope encryption instead of SSH key derivation:
+When a profile has `--kms-key-id` set, passauto uses AWS KMS envelope encryption instead of SSH key derivation:
 
 ```
-autopass myserver
+passauto myserver
     ├─ Call KMS GenerateDataKey -> get plaintext DEK + encrypted DEK
     ├─ Encrypt secret with DEK (AES-256-GCM)
     └─ Store encrypted DEK + ciphertext together
@@ -93,28 +93,28 @@ autopass myserver
 
 ```bash
 # SSH server
-autopass add -c "ssh deploy@prod-server" -m "password:" prod
+passauto add -c "ssh deploy@prod-server" -m "password:" prod
 
 # PostgreSQL
-autopass add -c "psql -h db.example.com -U admin mydb" -m "password" -p "=>\s*$" mydb
+passauto add -c "psql -h db.example.com -U admin mydb" -m "password" -p "=>\s*$" mydb
 
 # MySQL
-autopass add -c "mysql -h db.example.com -u root -p" -m "password:" mysql-prod
+passauto add -c "mysql -h db.example.com -u root -p" -m "password:" mysql-prod
 
 # Docker registry
-autopass add -c "docker login registry.example.com -u ci" -m "password:" docker-reg
+passauto add -c "docker login registry.example.com -u ci" -m "password:" docker-reg
 
 # Sudo
-autopass add -c "sudo apt upgrade -y" -m "password" apt-upgrade
+passauto add -c "sudo apt upgrade -y" -m "password" apt-upgrade
 
 # Kerberos
-autopass add -c "kinit admin@EXAMPLE.COM" -m "password for" krb
+passauto add -c "kinit admin@EXAMPLE.COM" -m "password for" krb
 
 # Oracle SQL*Plus
-autopass add -c "sqlplus admin@orcl" -m "password:" oracle-prod
+passauto add -c "sqlplus admin@orcl" -m "password:" oracle-prod
 
 # Redis CLI (AUTH)
-autopass add -c "redis-cli -h cache.example.com" -m "password:" redis
+passauto add -c "redis-cli -h cache.example.com" -m "password:" redis
 ```
 
 ### Post-Login Commands
@@ -123,38 +123,38 @@ Chain commands after the password is auto-filled:
 
 ```bash
 # Run SQL queries after connecting
-autopass mydb --then "SELECT now();" --then "\q"
+passauto mydb --then "SELECT now();" --then "\q"
 
 # Execute a script file
-autopass mydb --script queries.sql
+passauto mydb --script queries.sql
 
 # Combined
-autopass mydb --then "\timing on" --script queries.sql --then "\q"
+passauto mydb --then "\timing on" --script queries.sql --then "\q"
 ```
 
 ### Update a Profile
 
 ```bash
 # Change only the secret
-autopass update prod --secret
+passauto update prod --secret
 
 # Change the command
-autopass update prod -c "ssh newuser@prod-server"
+passauto update prod -c "ssh newuser@prod-server"
 
 # Change match pattern and timeout
-autopass update mysql-prod -m "enter password:" -t 60s
+passauto update mysql-prod -m "enter password:" -t 60s
 
 # Change description
-autopass update prod -d "Production deployment server"
+passauto update prod -d "Production deployment server"
 
 # Set post-login steps
-autopass update mydb --then "\timing on" --then "SET search_path TO app;"
+passauto update mydb --then "\timing on" --then "SET search_path TO app;"
 
 # Set post-exit commands
-autopass update krb --after "klist" --after "echo done"
+passauto update krb --after "klist" --after "echo done"
 
 # Enable case-sensitive matching
-autopass update myserver --case-sensitive
+passauto update myserver --case-sensitive
 ```
 
 ### Quiet Mode
@@ -163,32 +163,32 @@ Run without terminal output (useful for scripts/CI):
 
 ```bash
 # Silent execution — password still auto-filled
-autopass mydb --quiet --script queries.sql
+passauto mydb --quiet --script queries.sql
 
 # Short form
-autopass mydb -q --then "SELECT 1;"
+passauto mydb -q --then "SELECT 1;"
 
 # Capture output to file (without --quiet, stdout has PTY output)
-autopass mydb --script queries.sql > result.txt
+passauto mydb --script queries.sql > result.txt
 ```
 
 ## Commands
 
 | Command | Description |
 |---------|-------------|
-| `autopass <profile> [-s service]` | Run a profile with auto-answering |
-| `autopass add <profile>` | Create a new profile |
-| `autopass update <profile>` | Update specific fields of a profile |
-| `autopass list` | Show all profiles |
-| `autopass remove <profile>` | Delete a profile |
-| `autopass change-key <path>` | Switch to a new SSH key for encryption |
-| `autopass export <file>` | Export profiles to JSON (without secrets) |
-| `autopass import <file>` | Import profiles from JSON |
-| `autopass backup <dir>` | Backup key + data to a directory |
-| `autopass restore <dir>` | Restore key + data from a backup |
-| `autopass completion <shell>` | Generate shell completion (bash/zsh/fish/powershell) |
-| `autopass version` | Print version info |
-| `autopass init` | First-time setup |
+| `passauto <profile> [-s service]` | Run a profile with auto-answering |
+| `passauto add <profile>` | Create a new profile |
+| `passauto update <profile>` | Update specific fields of a profile |
+| `passauto list` | Show all profiles |
+| `passauto remove <profile>` | Delete a profile |
+| `passauto change-key <path>` | Switch to a new SSH key for encryption |
+| `passauto export <file>` | Export profiles to JSON (without secrets) |
+| `passauto import <file>` | Import profiles from JSON |
+| `passauto backup <dir>` | Backup key + data to a directory |
+| `passauto restore <dir>` | Restore key + data from a backup |
+| `passauto completion <shell>` | Generate shell completion (bash/zsh/fish/powershell) |
+| `passauto version` | Print version info |
+| `passauto init` | First-time setup |
 
 ## Pattern Matching
 
@@ -202,16 +202,16 @@ When a server has multiple services (SSH, PostgreSQL, Oracle, etc.), use `-s` to
 
 ```bash
 # Add multiple services for the same server
-autopass add -c "ssh admin@prod" -m "password:" prod -s ssh
-autopass add -c "psql -h prod -U admin" -m "password" prod -s pg
-autopass add -c "sqlplus admin@prod-orcl" -m "password:" prod -s oracle
+passauto add -c "ssh admin@prod" -m "password:" prod -s ssh
+passauto add -c "psql -h prod -U admin" -m "password" prod -s pg
+passauto add -c "sqlplus admin@prod-orcl" -m "password:" prod -s oracle
 
 # Run -- if name is unique, runs directly
-autopass prod              # multiple matches -> shows selection menu
-autopass prod -s ssh       # exact match -> runs directly
+passauto prod              # multiple matches -> shows selection menu
+passauto prod -s ssh       # exact match -> runs directly
 
 # List shows service column
-autopass list
+passauto list
 # NAME   SERVICE   COMMAND                          DESCRIPTION
 # prod   ssh       ssh admin@prod                   ...
 # prod   pg        psql -h prod -U admin            ...
@@ -222,31 +222,31 @@ Uniqueness is enforced on `(name, service)` pairs. Profiles without `-s` have an
 
 ## Keychain Cache
 
-autopass caches the derived AES encryption key in your OS keychain (macOS Keychain, Linux secret-service, Windows Credential Manager) to avoid re-reading the SSH key on every run.
+passauto caches the derived AES encryption key in your OS keychain (macOS Keychain, Linux secret-service, Windows Credential Manager) to avoid re-reading the SSH key on every run.
 
 - Cache TTL: 1 hour (auto-expires)
 - Per-profile isolation (each profile caches independently)
 - Disable with `--no-cache` flag
 
 ```bash
-autopass prod              # first run: reads SSH key, caches derived key
-autopass prod              # subsequent: uses cached key (faster)
-autopass prod --no-cache   # bypass cache, re-derive from SSH key
+passauto prod              # first run: reads SSH key, caches derived key
+passauto prod              # subsequent: uses cached key (faster)
+passauto prod --no-cache   # bypass cache, re-derive from SSH key
 ```
 
 ## KMS Envelope Encryption
 
-For team/enterprise use, autopass supports AWS KMS envelope encryption. Instead of deriving keys from a local SSH key, KMS generates and manages data encryption keys.
+For team/enterprise use, passauto supports AWS KMS envelope encryption. Instead of deriving keys from a local SSH key, KMS generates and manages data encryption keys.
 
 ```bash
 # Add a profile with KMS encryption
-autopass add -c "ssh admin@prod" -m "password:" prod --kms-key-id arn:aws:kms:us-east-1:123456:key/abc-def
+passauto add -c "ssh admin@prod" -m "password:" prod --kms-key-id arn:aws:kms:us-east-1:123456:key/abc-def
 
 # Existing profiles: switch to KMS
-autopass update prod --kms-key-id arn:aws:kms:us-east-1:123456:key/abc-def
+passauto update prod --kms-key-id arn:aws:kms:us-east-1:123456:key/abc-def
 
 # Run as normal -- KMS decryption is transparent
-autopass prod
+passauto prod
 ```
 
 Requirements:
@@ -257,28 +257,28 @@ Requirements:
 
 ```bash
 # Backup key and encrypted data to a directory
-autopass backup /mnt/usb/autopass-backup
+passauto backup /mnt/usb/passauto-backup
 
 # Restore on a new machine
-autopass restore /mnt/usb/autopass-backup
+passauto restore /mnt/usb/passauto-backup
 
 # Overwrite existing data
-autopass restore ~/backup --force
+passauto restore ~/backup --force
 ```
 
 Export/import profiles *without* the encryption key (for sharing configs):
 
 ```bash
-autopass export profiles.json    # secrets excluded
-autopass import profiles.json    # merge with existing (--force to overwrite)
+passauto export profiles.json    # secrets excluded
+passauto import profiles.json    # merge with existing (--force to overwrite)
 ```
 
 ## Security
 
 - Secrets encrypted with **AES-256-GCM** (random nonce per secret)
 - Encryption key derived from your **SSH private key** via HKDF-SHA256 — never stored on disk
-- If no SSH key exists, a dedicated ed25519 key is auto-generated at `~/.autopass/autopass_key`
-- Data file at `~/.autopass/data.json` with 0600 permissions
+- If no SSH key exists, a dedicated ed25519 key is auto-generated at `~/.passauto/passauto_key`
+- Data file at `~/.passauto/data.json` with 0600 permissions
 - No plaintext secrets anywhere
 
 ## Platform Support

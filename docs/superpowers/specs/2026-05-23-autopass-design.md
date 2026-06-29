@@ -1,4 +1,4 @@
-# autopass — Automated Interactive Prompt Responder
+# passauto — Automated Interactive Prompt Responder
 
 ## Overview
 
@@ -17,13 +17,13 @@ A Go CLI tool that wraps commands in a pseudo-terminal (PTY), watches output for
 
 ```
 ┌─────────────────────────────────────────────────┐
-│                   autopass CLI                    │
+│                   passauto CLI                    │
 ├─────────────┬──────────────┬────────────────────┤
 │  Config     │  Crypto      │  PTY Engine        │
 │  (YAML)     │  (AES-GCM)  │  (creack/pty +     │
 │             │              │   conpty)           │
 ├─────────────┴──────────────┴────────────────────┤
-│              Secret Store (~/.autopass/)          │
+│              Secret Store (~/.passauto/)          │
 └─────────────────────────────────────────────────┘
 ```
 
@@ -33,44 +33,44 @@ A Go CLI tool that wraps commands in a pseudo-terminal (PTY), watches output for
 2. **Config** — YAML profile/pattern loader and validator
 3. **Crypto** — SSH key-based key derivation, AES-GCM encrypt/decrypt
 4. **PTY Engine** — cross-platform PTY spawning, output buffering, pattern matching, response injection
-5. **Secret Store** — encrypted JSON blob at `~/.autopass/secrets.enc`
+5. **Secret Store** — encrypted JSON blob at `~/.passauto/secrets.enc`
 
 ## CLI Interface
 
 ```
-autopass init                     # First-time setup: select SSH key, derive encryption key
-autopass add <name>               # Store a new secret (prompts for value securely)
-autopass list                     # List stored secret names (not values)
-autopass remove <name>            # Delete a stored secret
-autopass run <command...>         # Ad-hoc: wrap a command with pattern matching from defaults
-autopass <profile>                # Run a named profile from config (profile names must not collide with subcommands)
+passauto init                     # First-time setup: select SSH key, derive encryption key
+passauto add <name>               # Store a new secret (prompts for value securely)
+passauto list                     # List stored secret names (not values)
+passauto remove <name>            # Delete a stored secret
+passauto run <command...>         # Ad-hoc: wrap a command with pattern matching from defaults
+passauto <profile>                # Run a named profile from config (profile names must not collide with subcommands)
 ```
 
 ### Usage Examples
 
 ```bash
 # First-time setup
-autopass init
+passauto init
 # → Select SSH key: ~/.ssh/id_ed25519
 # → Enter passphrase (if key is encrypted): ****
-# → Initialized. Config at ~/.autopass/config.yaml
+# → Initialized. Config at ~/.passauto/config.yaml
 
 # Store a password
-autopass add midway-password
+passauto add midway-password
 # → Enter secret: ****
 # → Stored "midway-password" (encrypted)
 
 # Ad-hoc usage (patterns from config's "defaults" rules)
-autopass run mwinit -s -o
+passauto run mwinit -s -o
 
 # Profile usage
-autopass mwinit
+passauto mwinit
 # → Expands to `mwinit -s -o` with profile-specific patterns
 ```
 
 ## Configuration
 
-Location: `~/.autopass/config.yaml`
+Location: `~/.passauto/config.yaml`
 
 ```yaml
 ssh_key: ~/.ssh/id_ed25519
@@ -118,7 +118,7 @@ profiles:
 1. Read SSH private key file (e.g., `~/.ssh/id_ed25519`)
 2. If passphrase-protected, prompt user for passphrase to decrypt it
 3. Extract raw private key bytes
-4. Derive 256-bit AES key using HKDF-SHA256 with salt `"autopass-salt-v1"` and info `"autopass-v1"`
+4. Derive 256-bit AES key using HKDF-SHA256 with salt `"passauto-salt-v1"` and info `"passauto-v1"`
 
 ### Encryption
 
@@ -128,7 +128,7 @@ profiles:
 
 ### Secret Store File
 
-Location: `~/.autopass/secrets.enc`, permissions `0600`
+Location: `~/.passauto/secrets.enc`, permissions `0600`
 
 ```json
 {
@@ -175,7 +175,7 @@ Location: `~/.autopass/secrets.enc`, permissions `0600`
 - **Terminal resize:** SIGWINCH (Unix) / console events (Windows) forwarded to child PTY
 - **Signal forwarding:** SIGINT, SIGTERM forwarded to child process
 - **Timeout:** If pattern not matched within timeout, control passes to user (no hang)
-- **Exit code:** autopass exits with child's exit code
+- **Exit code:** passauto exits with child's exit code
 - **Partial line matching:** Short delay (100ms) after output without newline to detect prompts that don't end with newline
 
 ### Pattern Matching Strategy
@@ -189,7 +189,7 @@ Location: `~/.autopass/secrets.enc`, permissions `0600`
 
 ### Startup Errors
 
-- SSH key not found → clear error, suggest `autopass init`
+- SSH key not found → clear error, suggest `passauto init`
 - SSH key passphrase wrong → retry up to 3 times, then fail
 - Config malformed → error with context
 - Referenced secret not in store → error naming the missing secret before spawning child
@@ -203,7 +203,7 @@ Location: `~/.autopass/secrets.enc`, permissions `0600`
 ### Security Edge Cases
 
 - Secrets never in logs, env vars, or temp files
-- Warn if `~/.autopass/` permissions are world-readable
+- Warn if `~/.passauto/` permissions are world-readable
 - Config can reference nonexistent secrets → error at run time, not parse time
 
 ### Graceful Degradation
@@ -246,7 +246,7 @@ Location: `~/.autopass/secrets.enc`, permissions `0600`
 ## File Layout
 
 ```
-~/.autopass/
+~/.passauto/
 ├── config.yaml       # Profiles and patterns
 └── secrets.enc       # Encrypted secrets (JSON, 0600)
 ```
@@ -254,14 +254,14 @@ Location: `~/.autopass/secrets.enc`, permissions `0600`
 ## Project Structure
 
 ```
-autopass/
+passauto/
 ├── cmd/
 │   ├── root.go       # Cobra root command
-│   ├── init.go       # autopass init
-│   ├── add.go        # autopass add
-│   ├── list.go       # autopass list
-│   ├── remove.go     # autopass remove
-│   └── run.go        # autopass run + profile dispatch
+│   ├── init.go       # passauto init
+│   ├── add.go        # passauto add
+│   ├── list.go       # passauto list
+│   ├── remove.go     # passauto remove
+│   └── run.go        # passauto run + profile dispatch
 ├── internal/
 │   ├── config/       # YAML config loading and validation
 │   ├── crypto/       # Key derivation, encrypt, decrypt

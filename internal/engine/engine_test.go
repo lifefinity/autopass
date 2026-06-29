@@ -28,7 +28,7 @@ func buildMockPrompt(t *testing.T) string {
 
 func TestEngine_MultiPrompt(t *testing.T) {
 	if runtime.GOOS == "windows" {
-		t.Skip("ConPTY integration test requires manual verification on Windows (use 'autopass run' with a real interactive program)")
+		t.Skip("ConPTY integration test requires manual verification on Windows (use 'passauto run' with a real interactive program)")
 	}
 
 	bin := buildMockPrompt(t)

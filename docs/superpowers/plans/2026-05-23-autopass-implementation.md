@@ -1,4 +1,4 @@
-# autopass Implementation Plan
+# passauto Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -13,16 +13,16 @@
 ## File Structure
 
 ```
-autopass/
+passauto/
 ├── main.go                         # Entry point, calls cmd.Execute()
 ├── go.mod                          # Module definition
 ├── cmd/
 │   ├── root.go                     # Cobra root command, profile dispatch
-│   ├── init_cmd.go                 # autopass init
-│   ├── add.go                      # autopass add <name>
-│   ├── list.go                     # autopass list
-│   ├── remove.go                   # autopass remove <name>
-│   └── run.go                      # autopass run <command...>
+│   ├── init_cmd.go                 # passauto init
+│   ├── add.go                      # passauto add <name>
+│   ├── list.go                     # passauto list
+│   ├── remove.go                   # passauto remove <name>
+│   └── run.go                      # passauto run <command...>
 ├── internal/
 │   ├── crypto/
 │   │   ├── crypto.go               # DeriveKey, Encrypt, Decrypt
@@ -60,18 +60,18 @@ autopass/
 
 Run:
 ```bash
-cd C:/workspace/ai-incubation/projects/autopass
-go mod init autopass
+cd C:/workspace/ai-incubation/projects/passauto
+go mod init passauto
 ```
 
-Expected: `go.mod` created with `module autopass`
+Expected: `go.mod` created with `module passauto`
 
 - [ ] **Step 2: Create main.go**
 
 ```go
 package main
 
-import "autopass/cmd"
+import "passauto/cmd"
 
 func main() {
 	cmd.Execute()
@@ -91,7 +91,7 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "autopass",
+	Use:   "passauto",
 	Short: "Automated interactive prompt responder",
 	Long:  "Wraps commands in a PTY, matches output patterns, and responds with decrypted secrets.",
 }
@@ -127,7 +127,7 @@ Expected: No errors, binary produced
 
 ```bash
 git add main.go go.mod go.sum cmd/root.go
-git commit -m "feat: scaffold autopass project with cobra CLI"
+git commit -m "feat: scaffold passauto project with cobra CLI"
 ```
 
 ---
@@ -144,7 +144,7 @@ git commit -m "feat: scaffold autopass project with cobra CLI"
 Run:
 ```bash
 mkdir -p testdata
-ssh-keygen -t ed25519 -f testdata/test_key_ed25519 -N "" -C "autopass-test"
+ssh-keygen -t ed25519 -f testdata/test_key_ed25519 -N "" -C "passauto-test"
 ```
 
 Expected: `testdata/test_key_ed25519` (private) and `testdata/test_key_ed25519.pub` (public) created
@@ -225,8 +225,8 @@ import (
 )
 
 var (
-	hkdfSalt = []byte("autopass-salt-v1")
-	hkdfInfo = []byte("autopass-v1")
+	hkdfSalt = []byte("passauto-salt-v1")
+	hkdfInfo = []byte("passauto-v1")
 )
 
 func DeriveKey(sshKeyPath string, passphrase []byte) ([]byte, error) {
@@ -601,7 +601,7 @@ import (
 	"path/filepath"
 	"sort"
 
-	"autopass/internal/crypto"
+	"passauto/internal/crypto"
 )
 
 type Store struct {
@@ -998,7 +998,7 @@ package engine
 import (
 	"testing"
 
-	"autopass/internal/config"
+	"passauto/internal/config"
 )
 
 func TestMatcher_SimpleMatch(t *testing.T) {
@@ -1085,7 +1085,7 @@ import (
 	"fmt"
 	"regexp"
 
-	"autopass/internal/config"
+	"passauto/internal/config"
 )
 
 type MatchResult struct {
@@ -1170,7 +1170,7 @@ import (
 	"sync"
 	"time"
 
-	"autopass/internal/config"
+	"passauto/internal/config"
 )
 
 type Options struct {
@@ -1576,7 +1576,7 @@ import (
 	"testing"
 	"time"
 
-	"autopass/internal/config"
+	"passauto/internal/config"
 )
 
 func buildMockPrompt(t *testing.T) string {
@@ -1665,12 +1665,12 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 
-	"autopass/internal/crypto"
+	"passauto/internal/crypto"
 )
 
 var initCmd = &cobra.Command{
 	Use:   "init",
-	Short: "Initialize autopass (first-time setup)",
+	Short: "Initialize passauto (first-time setup)",
 	RunE:  runInit,
 }
 
@@ -1684,11 +1684,11 @@ func runInit(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("getting home directory: %w", err)
 	}
 
-	autopassDir := filepath.Join(home, ".autopass")
-	configPath := filepath.Join(autopassDir, "config.yaml")
+	passautoDir := filepath.Join(home, ".passauto")
+	configPath := filepath.Join(passautoDir, "config.yaml")
 
 	if _, err := os.Stat(configPath); err == nil {
-		fmt.Println("autopass is already initialized. Config at:", configPath)
+		fmt.Println("passauto is already initialized. Config at:", configPath)
 		return nil
 	}
 
@@ -1716,8 +1716,8 @@ func runInit(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	if err := os.MkdirAll(autopassDir, 0700); err != nil {
-		return fmt.Errorf("creating ~/.autopass: %w", err)
+	if err := os.MkdirAll(passautoDir, 0700); err != nil {
+		return fmt.Errorf("creating ~/.passauto: %w", err)
 	}
 
 	defaultConfig := fmt.Sprintf(`ssh_key: %s
@@ -1736,7 +1736,7 @@ profiles: {}
 	}
 
 	fmt.Println("Initialized. Config at:", configPath)
-	fmt.Println("Next: run 'autopass add <name>' to store a secret.")
+	fmt.Println("Next: run 'passauto add <name>' to store a secret.")
 	return nil
 }
 
@@ -1794,9 +1794,9 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 
-	"autopass/internal/config"
-	"autopass/internal/crypto"
-	"autopass/internal/store"
+	"passauto/internal/config"
+	"passauto/internal/crypto"
+	"passauto/internal/store"
 )
 
 var addCmd = &cobra.Command{
@@ -1819,7 +1819,7 @@ func runAdd(cmd *cobra.Command, args []string) error {
 	}
 
 	home, _ := os.UserHomeDir()
-	storePath := filepath.Join(home, ".autopass", "secrets.enc")
+	storePath := filepath.Join(home, ".passauto", "secrets.enc")
 
 	s, err := store.Open(storePath, key)
 	if err != nil {
@@ -1847,10 +1847,10 @@ func loadEncryptionKey() ([]byte, error) {
 		return nil, fmt.Errorf("getting home directory: %w", err)
 	}
 
-	configPath := filepath.Join(home, ".autopass", "config.yaml")
+	configPath := filepath.Join(home, ".passauto", "config.yaml")
 	cfg, err := config.Load(configPath)
 	if err != nil {
-		return nil, fmt.Errorf("loading config (have you run 'autopass init'?): %w", err)
+		return nil, fmt.Errorf("loading config (have you run 'passauto init'?): %w", err)
 	}
 
 	sshKeyPath := cfg.SSHKey
@@ -1890,7 +1890,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"autopass/internal/store"
+	"passauto/internal/store"
 )
 
 var listCmd = &cobra.Command{
@@ -1910,7 +1910,7 @@ func runList(cmd *cobra.Command, args []string) error {
 	}
 
 	home, _ := os.UserHomeDir()
-	storePath := filepath.Join(home, ".autopass", "secrets.enc")
+	storePath := filepath.Join(home, ".passauto", "secrets.enc")
 
 	s, err := store.Open(storePath, key)
 	if err != nil {
@@ -1919,7 +1919,7 @@ func runList(cmd *cobra.Command, args []string) error {
 
 	names := s.List()
 	if len(names) == 0 {
-		fmt.Println("No secrets stored. Use 'autopass add <name>' to add one.")
+		fmt.Println("No secrets stored. Use 'passauto add <name>' to add one.")
 		return nil
 	}
 
@@ -1944,7 +1944,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"autopass/internal/store"
+	"passauto/internal/store"
 )
 
 var removeCmd = &cobra.Command{
@@ -1967,7 +1967,7 @@ func runRemove(cmd *cobra.Command, args []string) error {
 	}
 
 	home, _ := os.UserHomeDir()
-	storePath := filepath.Join(home, ".autopass", "secrets.enc")
+	storePath := filepath.Join(home, ".passauto", "secrets.enc")
 
 	s, err := store.Open(storePath, key)
 	if err != nil {
@@ -2021,9 +2021,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"autopass/internal/config"
-	"autopass/internal/engine"
-	"autopass/internal/store"
+	"passauto/internal/config"
+	"passauto/internal/engine"
+	"passauto/internal/store"
 )
 
 var runCmd = &cobra.Command{
@@ -2077,7 +2077,7 @@ func executeWithPatterns(command []string, patterns []config.Pattern, timeout ti
 	}
 
 	home, _ := os.UserHomeDir()
-	storePath := filepath.Join(home, ".autopass", "secrets.enc")
+	storePath := filepath.Join(home, ".passauto", "secrets.enc")
 
 	s, err := store.Open(storePath, key)
 	if err != nil {
@@ -2121,10 +2121,10 @@ func loadConfig() (*config.Config, error) {
 		return nil, fmt.Errorf("getting home directory: %w", err)
 	}
 
-	configPath := filepath.Join(home, ".autopass", "config.yaml")
+	configPath := filepath.Join(home, ".passauto", "config.yaml")
 	cfg, err := config.Load(configPath)
 	if err != nil {
-		return nil, fmt.Errorf("loading config (have you run 'autopass init'?): %w", err)
+		return nil, fmt.Errorf("loading config (have you run 'passauto init'?): %w", err)
 	}
 
 	return cfg, nil
@@ -2184,9 +2184,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"autopass/internal/config"
-	"autopass/internal/engine"
-	"autopass/internal/store"
+	"passauto/internal/config"
+	"passauto/internal/engine"
+	"passauto/internal/store"
 )
 ```
 
@@ -2205,7 +2205,7 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "autopass",
+	Use:   "passauto",
 	Short: "Automated interactive prompt responder",
 	Long:  "Wraps commands in a PTY, matches output patterns, and responds with decrypted secrets.",
 	Args:  cobra.ArbitraryArgs,
@@ -2252,8 +2252,8 @@ git commit -m "feat(cli): implement run command and profile dispatch"
 
 Run:
 ```bash
-go build -o autopass .
-./autopass --help
+go build -o passauto .
+./passauto --help
 ```
 
 Expected: Help output showing all subcommands (init, add, list, remove, run)

@@ -10,27 +10,27 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "autopass",
+	Use:   "passauto",
 	Short: "Automated interactive prompt responder",
 	Long: `Wraps commands in a PTY, matches output patterns, and responds with decrypted secrets.
 
 Run a profile:
-  autopass <profile>              Run with auto-answering
-  autopass <profile> -s <service> Run specific service profile
-  autopass <profile> --then "cmd" Execute command after login
-  autopass <profile> --script f   Execute commands from file after login
-  autopass <profile> --prompt "x" Override shell prompt pattern
-  autopass <profile> -e K=V       Inject environment variable
-  autopass <profile> --after cmd  Run command in new shell after profile exits
-  autopass <profile> --quiet      Suppress terminal output
+  passauto <profile>              Run with auto-answering
+  passauto <profile> -s <service> Run specific service profile
+  passauto <profile> --then "cmd" Execute command after login
+  passauto <profile> --script f   Execute commands from file after login
+  passauto <profile> --prompt "x" Override shell prompt pattern
+  passauto <profile> -e K=V       Inject environment variable
+  passauto <profile> --after cmd  Run command in new shell after profile exits
+  passauto <profile> --quiet      Suppress terminal output
 
 Examples:
-  autopass mwinit                            # Auto-fill PIN for mwinit
-  autopass mydb --then "SELECT now();"       # Run SQL after connecting
-  autopass prod --script deploy.sh           # Run script after login
-  autopass mydb --then "\timing" --then "\q" # Chain multiple commands
-  autopass deploy -e HOST=prod.example.com   # Inject env var
-  autopass mydb -s staging                   # Run the 'staging' service variant`,
+  passauto mwinit                            # Auto-fill PIN for mwinit
+  passauto mydb --then "SELECT now();"       # Run SQL after connecting
+  passauto prod --script deploy.sh           # Run script after login
+  passauto mydb --then "\timing" --then "\q" # Chain multiple commands
+  passauto deploy -e HOST=prod.example.com   # Inject env var
+  passauto mydb -s staging                   # Run the 'staging' service variant`,
 	Version: Version,
 	Args:    cobra.ArbitraryArgs,
 	ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {

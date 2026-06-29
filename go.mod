@@ -1,4 +1,4 @@
-module github.com/lifefinity/autopass
+module github.com/lifefinity/passauto
 
 go 1.26.4
 
