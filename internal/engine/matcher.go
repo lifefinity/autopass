@@ -7,9 +7,10 @@ import (
 
 // Pattern represents a prompt pattern to match and respond to.
 type Pattern struct {
-	Match   string
-	Respond string
-	Hidden  bool
+	Match     string
+	Respond   string
+	Hidden    bool
+	Responder func() string // if set, called instead of using Respond
 }
 
 type MatchResult struct {
@@ -18,9 +19,10 @@ type MatchResult struct {
 }
 
 type compiledPattern struct {
-	regex    *regexp.Regexp
-	response string
-	hidden   bool
+	regex     *regexp.Regexp
+	response  string
+	hidden    bool
+	responder func() string
 }
 
 type Matcher struct {
@@ -35,9 +37,10 @@ func NewMatcher(patterns []Pattern) (*Matcher, error) {
 			return nil, fmt.Errorf("compiling pattern %q: %w", p.Match, err)
 		}
 		compiled[i] = compiledPattern{
-			regex:    re,
-			response: p.Respond,
-			hidden:   p.Hidden,
+			regex:     re,
+			response:  p.Respond,
+			hidden:    p.Hidden,
+			responder: p.Responder,
 		}
 	}
 	return &Matcher{patterns: compiled}, nil
@@ -46,8 +49,12 @@ func NewMatcher(patterns []Pattern) (*Matcher, error) {
 func (m *Matcher) Check(line string) *MatchResult {
 	for _, p := range m.patterns {
 		if p.regex.MatchString(line) {
+			resp := p.response
+			if p.responder != nil {
+				resp = p.responder()
+			}
 			return &MatchResult{
-				Response: p.response,
+				Response: resp,
 				Hidden:   p.hidden,
 			}
 		}

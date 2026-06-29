@@ -25,6 +25,8 @@ var (
 	addAfter         []string
 	addDesc          string
 	addKMSKeyID      string
+	addTOTP          bool
+	addTOTPMatch     []string
 )
 
 var addCmd = &cobra.Command{
@@ -97,6 +99,8 @@ func init() {
 	addCmd.Flags().StringArrayVar(&addSteps, "then", nil, "command to run after login (can specify multiple)")
 	addCmd.Flags().StringArrayVar(&addAfter, "after", nil, "command to run in new shell after profile exits (can specify multiple)")
 	addCmd.Flags().StringVar(&addKMSKeyID, "kms-key-id", "", "AWS KMS key ID for envelope encryption (overrides SSH key derivation)")
+	addCmd.Flags().BoolVar(&addTOTP, "totp", false, "prompt for a TOTP secret seed (for 2FA auto-fill)")
+	addCmd.Flags().StringArrayVar(&addTOTPMatch, "totp-match", nil, "prompt pattern that triggers TOTP code (regex, can specify multiple)")
 	rootCmd.AddCommand(addCmd)
 }
 
@@ -176,12 +180,65 @@ func runAdd(cmd *cobra.Command, args []string) error {
 		patterns[i] = data.Pattern{Match: m, Hidden: true, CaseSensitive: addCaseSensitive}
 	}
 
+	// Add TOTP patterns
+	for _, tp := range addTOTPMatch {
+		patterns = append(patterns, data.Pattern{Match: tp, Hidden: true, CaseSensitive: addCaseSensitive, TOTP: true})
+	}
+
+	// Encrypt TOTP seed if --totp or --totp-match provided
+	var totpEncB64 string
+	if addTOTP || len(addTOTPMatch) > 0 {
+		fmt.Printf("Enter TOTP secret seed (base32, will be hidden): ")
+		totpSeed, readErr := term.ReadPassword(int(os.Stdin.Fd())) // #nosec G115
+		fmt.Println()
+		if readErr != nil {
+			return fmt.Errorf("reading TOTP seed: %w", readErr)
+		}
+		defer func() {
+			for i := range totpSeed {
+				totpSeed[i] = 0
+			}
+		}()
+
+		profileKey := data.ProfileKey(name, serviceFlag)
+		if addKMSKeyID != "" {
+			sealed, kmsErr := crypto.KMSEncrypt(cmd.Context(), addKMSKeyID, totpSeed, []byte(profileKey))
+			if kmsErr != nil {
+				return fmt.Errorf("KMS encrypting TOTP seed: %w", kmsErr)
+			}
+			totpEncB64 = base64.StdEncoding.EncodeToString(sealed)
+		} else {
+			var encKey []byte
+			if key != nil {
+				encKey = key
+			} else {
+				encKey, err = deriveKey()
+				if err != nil {
+					return err
+				}
+			}
+			ciphertext, encErr := crypto.Encrypt(encKey, totpSeed, []byte(profileKey))
+			if encErr != nil {
+				return fmt.Errorf("encrypting TOTP seed: %w", encErr)
+			}
+			totpEncB64 = base64.StdEncoding.EncodeToString(ciphertext)
+		}
+
+		// If --totp without --totp-match, use same match patterns as TOTP
+		if addTOTP && len(addTOTPMatch) == 0 {
+			for i := range patterns {
+				patterns[i].TOTP = true
+			}
+		}
+	}
+
 	profile := data.Profile{
 		Command:     command,
 		Description: addDesc,
 		Service:     serviceFlag,
 		Patterns:    patterns,
 		Secret:      encryptedB64,
+		TOTPSecret:  totpEncB64,
 		Prompt:      addPrompt,
 		Timeout:     data.Duration{Duration: timeout},
 		Steps:       addSteps,

@@ -117,6 +117,23 @@ autopass add -c "sqlplus admin@orcl" -m "password:" oracle-prod
 autopass add -c "redis-cli -h cache.example.com" -m "password:" redis
 ```
 
+### TOTP / 2FA
+
+Auto-fill time-based one-time passwords alongside regular secrets:
+
+```bash
+# TOTP-only profile
+autopass add -c "vpn-connect" -m "Verification code:" vpn --totp
+
+# Password + TOTP (two-step auth)
+autopass add -c "ssh admin@server" -m "password:" --totp-match "Verification code:" myserver
+
+# Update TOTP seed
+autopass update myserver --totp-secret
+```
+
+The TOTP seed is encrypted at rest. Codes are generated just-in-time (RFC 6238, 6 digits, 30s period).
+
 ### Post-Login Commands
 
 Chain commands after the password is auto-filled:
@@ -155,6 +172,12 @@ autopass update krb --after "klist" --after "echo done"
 
 # Enable case-sensitive matching
 autopass update myserver --case-sensitive
+
+# Update TOTP seed
+autopass update myserver --totp-secret
+
+# Add/change TOTP pattern
+autopass update myserver --totp-match "OTP:"
 ```
 
 ### Quiet Mode
