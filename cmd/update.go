@@ -36,13 +36,13 @@ unspecified fields remain unchanged.
 
 Examples:
   # Update only the secret
-  passauto update mwinit --secret
+  passauto update myserver --secret
 
   # Update the command
-  passauto update mwinit -c "mwinit -s -o -f"
+  passauto update myserver -c "ssh newuser@host"
 
   # Update match pattern and timeout
-  passauto update mwinit -m "PIN:" -t 60s
+  passauto update myserver -m "password:" -t 60s
 
   # Update multiple fields at once
   passauto update myserver -c "ssh newuser@host" -m "password:" --secret`,

@@ -63,10 +63,10 @@ Post-login automation (use --then/--script when running):
 
 Post-exit commands (--after):
   Run commands in a new shell after the profile process exits successfully.
-  Useful for non-interactive tools like mwinit, kinit, or ssh one-shot commands.
+  Useful for non-interactive tools like kinit, ssh one-shot commands, etc.
 
-  # mwinit completes → run date
-  passauto add -c "mwinit -s -o" -m "PIN:" --after "date" mwinit
+  # kinit completes → verify ticket
+  passauto add -c "kinit user@REALM" -m "Password:" --after "klist" krb
 
   # SSH session ends → sync local files
   passauto add -c "ssh deploy@prod" -m "password:" --after "echo 'session ended'" prod

@@ -111,7 +111,7 @@ func friendlyPattern(match string) string {
 func printExamples() {
 	fmt.Println("Get started with 'passauto add <name>'. Examples:")
 	fmt.Println()
-	fmt.Println("  passauto add mwinit       # Midway (Amazon)")
+	fmt.Println("  passauto add myserver     # Create a new profile")
 	fmt.Println("  passauto add myserver     # SSH to a host")
 	fmt.Println("  passauto add mysudo       # Sudo commands")
 	fmt.Println("  passauto add docker       # Docker login")
