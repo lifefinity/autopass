@@ -24,6 +24,8 @@ var (
 	updateAfter         []string
 	updateDesc          string
 	updateKMSKeyID      string
+	updateTOTPSecret    bool
+	updateTOTPMatch     []string
 )
 
 var updateCmd = &cobra.Command{
@@ -65,6 +67,8 @@ func init() {
 	updateCmd.Flags().StringArrayVar(&updateSteps, "then", nil, "update post-login commands (replaces existing)")
 	updateCmd.Flags().StringArrayVar(&updateAfter, "after", nil, "update post-exit commands (replaces existing)")
 	updateCmd.Flags().StringVar(&updateKMSKeyID, "kms-key-id", "", "set AWS KMS key ID for envelope encryption")
+	updateCmd.Flags().BoolVar(&updateTOTPSecret, "totp-secret", false, "prompt for a new TOTP secret seed")
+	updateCmd.Flags().StringArrayVar(&updateTOTPMatch, "totp-match", nil, "update TOTP prompt patterns (replaces existing)")
 	rootCmd.AddCommand(updateCmd)
 }
 
@@ -92,7 +96,9 @@ func runUpdate(cmd *cobra.Command, args []string) error {
 		cmd.Flags().Changed("then") ||
 		cmd.Flags().Changed("after") ||
 		cmd.Flags().Changed("kms-key-id") ||
-		updateSecret
+		cmd.Flags().Changed("totp-match") ||
+		updateSecret ||
+		updateTOTPSecret
 
 	if !anyChange {
 		return fmt.Errorf("no flags specified. Use --help to see available options")
@@ -189,6 +195,60 @@ func runUpdate(cmd *cobra.Command, args []string) error {
 				return fmt.Errorf("encrypting secret: %w", encErr)
 			}
 			profile.Secret = base64.StdEncoding.EncodeToString(ciphertext)
+		}
+	}
+
+	// Update TOTP patterns
+	if cmd.Flags().Changed("totp-match") {
+		// Remove existing TOTP patterns
+		var nonTOTP []data.Pattern
+		for _, p := range profile.Patterns {
+			if !p.TOTP {
+				nonTOTP = append(nonTOTP, p)
+			}
+		}
+		// Add new TOTP patterns
+		for _, tp := range updateTOTPMatch {
+			nonTOTP = append(nonTOTP, data.Pattern{Match: tp, Hidden: true, CaseSensitive: updateCaseSensitive, TOTP: true})
+		}
+		profile.Patterns = nonTOTP
+	}
+
+	// Update TOTP secret
+	if updateTOTPSecret {
+		kmsKey := profile.KMSKeyID
+		if cmd.Flags().Changed("kms-key-id") {
+			kmsKey = updateKMSKeyID
+		}
+
+		fmt.Printf("Enter new TOTP secret seed (base32, will be hidden): ")
+		totpSeed, readErr := term.ReadPassword(int(os.Stdin.Fd())) // #nosec G115
+		fmt.Println()
+		if readErr != nil {
+			return fmt.Errorf("reading TOTP seed: %w", readErr)
+		}
+		defer func() {
+			for i := range totpSeed {
+				totpSeed[i] = 0
+			}
+		}()
+
+		if kmsKey != "" {
+			sealed, encErr := crypto.KMSEncrypt(cmd.Context(), kmsKey, totpSeed, []byte(profileKey))
+			if encErr != nil {
+				return fmt.Errorf("KMS encrypting TOTP seed: %w", encErr)
+			}
+			profile.TOTPSecret = base64.StdEncoding.EncodeToString(sealed)
+		} else {
+			key, keyErr := deriveKey()
+			if keyErr != nil {
+				return keyErr
+			}
+			ciphertext, encErr := crypto.Encrypt(key, totpSeed, []byte(profileKey))
+			if encErr != nil {
+				return fmt.Errorf("encrypting TOTP seed: %w", encErr)
+			}
+			profile.TOTPSecret = base64.StdEncoding.EncodeToString(ciphertext)
 		}
 	}
 

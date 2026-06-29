@@ -28,4 +28,8 @@ var versionCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(versionCmd)
+	rootCmd.SetVersionTemplate(fmt.Sprintf(
+		"autopass %s\n  commit:  %s\n  built:   %s\n  go:      %s\n  os/arch: %s/%s\n",
+		Version, Commit, BuildDate, runtime.Version(), runtime.GOOS, runtime.GOARCH,
+	))
 }

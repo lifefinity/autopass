@@ -179,6 +179,23 @@ autopass add -c "git push origin main" -m "Password for" git-push
 autopass add -c "git clone https://github.com/org/private-repo.git" -m "Password for" git-clone
 ```
 
+## TOTP / Two-Factor Authentication
+
+```bash
+# TOTP-only (VPN token, MFA prompt)
+autopass add -c "vpn-connect" -m "Verification code:" vpn --totp
+
+# Password + TOTP (two-step login)
+autopass add -c "ssh admin@secure-server" -m "password:" \
+  --totp-match "Verification code:" secure-ssh
+
+# AWS CLI MFA (token code prompt)
+autopass add -c "aws sts get-session-token" -m "Enter MFA code:" aws-mfa --totp
+
+# Run — both password and TOTP auto-filled
+autopass secure-ssh
+```
+
 ## Advanced Patterns
 
 ### Multiple Prompts

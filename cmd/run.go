@@ -12,6 +12,7 @@ import (
 
 	"github.com/lifefinity/autopass/internal/crypto"
 	"github.com/lifefinity/autopass/internal/engine"
+	"github.com/lifefinity/autopass/internal/totp"
 )
 
 func runProfileWithSteps(profileName string, runOpts profileRunOpts) error {
@@ -61,6 +62,35 @@ func runProfileWithSteps(profileName string, runOpts profileRunOpts) error {
 		secret = string(plaintext)
 	}
 
+	// Decrypt TOTP secret if present
+	var totpSeed string
+	if profile.TOTPSecret != "" {
+		ciphertext, err := base64.StdEncoding.DecodeString(profile.TOTPSecret)
+		if err != nil {
+			return fmt.Errorf("decoding TOTP secret: %w", err)
+		}
+
+		var plaintext []byte
+		if profile.KMSKeyID != "" {
+			plaintext, err = crypto.KMSDecrypt(context.Background(), ciphertext, []byte(profileKey))
+		} else {
+			key, keyErr := deriveKeyForProfile(profileKey)
+			if keyErr != nil {
+				return keyErr
+			}
+			plaintext, err = crypto.Decrypt(key, ciphertext, []byte(profileKey))
+		}
+		if err != nil {
+			return fmt.Errorf("decrypting TOTP secret: %w", err)
+		}
+		totpSeed = string(plaintext)
+		defer func() {
+			for i := range plaintext {
+				plaintext[i] = 0
+			}
+		}()
+	}
+
 	// Build engine patterns: each pattern's response is the decrypted secret
 	enginePatterns := make([]engine.Pattern, len(profile.Patterns))
 	for i, p := range profile.Patterns {
@@ -68,11 +98,23 @@ func runProfileWithSteps(profileName string, runOpts profileRunOpts) error {
 		if !p.CaseSensitive && !strings.HasPrefix(match, "(?i)") {
 			match = "(?i)" + match
 		}
-		enginePatterns[i] = engine.Pattern{
+		ep := engine.Pattern{
 			Match:   match,
 			Respond: secret,
 			Hidden:  p.Hidden,
 		}
+		if p.TOTP {
+			seed := totpSeed
+			ep.Respond = ""
+			ep.Responder = func() string {
+				code, err := totp.Generate(seed)
+				if err != nil {
+					return ""
+				}
+				return code
+			}
+		}
+		enginePatterns[i] = ep
 	}
 
 	// Load post-login steps: profile steps first, then runtime --then/--script
