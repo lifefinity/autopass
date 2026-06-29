@@ -136,6 +136,52 @@ passauto update prod --kms-key-id arn:aws:kms:us-east-1:123456:key/abc
 
 Requires AWS credentials and IAM permissions: `kms:GenerateDataKey`, `kms:Decrypt`.
 
+## TOTP / 2FA Support
+
+passauto can auto-fill time-based one-time passwords (TOTP/2FA). The TOTP secret seed is encrypted at rest alongside your password.
+
+### TOTP-Only Profile
+
+For services that only prompt for a verification code:
+
+```bash
+passauto add -c "vpn-connect" -m "Verification code:" myVPN --totp
+# Enter secret: (press Enter — no password needed)
+# Enter TOTP secret seed: <paste your base32 seed>
+```
+
+### Password + TOTP (Two-Step Auth)
+
+For services that prompt for password first, then a TOTP code:
+
+```bash
+passauto add -c "ssh user@server" -m "password:" --totp-match "Verification code:" myserver
+# Enter secret: <your password>
+# Enter TOTP secret seed: <your base32 TOTP seed>
+```
+
+### Update TOTP
+
+```bash
+# Change the TOTP seed
+passauto update myserver --totp-secret
+
+# Change which prompt triggers TOTP
+passauto update myserver --totp-match "OTP:"
+```
+
+### How It Works
+
+- The TOTP seed (base32) is stored encrypted with the same key as your password
+- At runtime, when a TOTP pattern matches, passauto generates a fresh 6-digit code (RFC 6238, HMAC-SHA1, 30-second period)
+- The code is generated just-in-time — not before the prompt appears
+
+### Finding Your TOTP Seed
+
+The TOTP seed is the base32 string you normally scan as a QR code. Most authenticator apps let you view the secret key:
+- Look for "Manual entry" or "Can't scan QR?" option during 2FA setup
+- It's typically a string like `JBSWY3DPEHPK3PXP`
+
 ## Running a Profile
 
 ```bash

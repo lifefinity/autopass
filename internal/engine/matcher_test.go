@@ -66,3 +66,43 @@ func TestMatcher_InvalidRegex(t *testing.T) {
 		t.Fatal("expected error for invalid regex")
 	}
 }
+
+func TestMatcher_Responder(t *testing.T) {
+	callCount := 0
+	patterns := []Pattern{
+		{Match: "(?i)verification code:", Hidden: true, Responder: func() string {
+			callCount++
+			return "123456"
+		}},
+	}
+
+	m, err := NewMatcher(patterns)
+	if err != nil {
+		t.Fatalf("NewMatcher failed: %v", err)
+	}
+
+	resp := m.Check("Verification code:")
+	if resp == nil {
+		t.Fatal("expected a match")
+	}
+	if resp.Response != "123456" {
+		t.Fatalf("expected '123456', got %q", resp.Response)
+	}
+	if callCount != 1 {
+		t.Fatalf("expected Responder called once, got %d", callCount)
+	}
+}
+
+func TestMatcher_ResponderOverridesRespond(t *testing.T) {
+	patterns := []Pattern{
+		{Match: "code:", Respond: "static", Responder: func() string {
+			return "dynamic"
+		}},
+	}
+
+	m, _ := NewMatcher(patterns)
+	resp := m.Check("Enter code:")
+	if resp.Response != "dynamic" {
+		t.Fatalf("Responder should override Respond, got %q", resp.Response)
+	}
+}

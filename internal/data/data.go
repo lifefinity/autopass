@@ -48,6 +48,7 @@ type Profile struct {
 	Service     string    `json:"service,omitempty"`
 	Patterns    []Pattern `json:"patterns"`
 	Secret      string    `json:"secret,omitempty"`
+	TOTPSecret  string    `json:"totp_secret,omitempty"`
 	Prompt      string    `json:"prompt,omitempty"`
 	Timeout     Duration  `json:"timeout"`
 	Steps       []string  `json:"steps,omitempty"`
@@ -59,6 +60,7 @@ type Pattern struct {
 	Match         string `json:"match"`
 	Hidden        bool   `json:"hidden"`
 	CaseSensitive bool   `json:"case_sensitive,omitempty"`
+	TOTP          bool   `json:"totp,omitempty"`
 }
 
 type Duration struct {
@@ -198,6 +200,7 @@ func Load(path string) (*Data, error) {
 	// Try legacy single-file format
 	var legacy struct {
 		KeyFile    string             `json:"key_file"`
+		SSHKey     string             `json:"ssh_key"`
 		KeyCommand string             `json:"key_command,omitempty"`
 		Profiles   map[string]Profile `json:"profiles"`
 	}
@@ -205,8 +208,13 @@ func Load(path string) (*Data, error) {
 		return nil, fmt.Errorf("parsing data file: %w", err)
 	}
 
+	keyFile := legacy.KeyFile
+	if keyFile == "" {
+		keyFile = legacy.SSHKey
+	}
+
 	d := &Data{
-		Config:   Config{KeyFile: legacy.KeyFile, KeyCommand: legacy.KeyCommand},
+		Config:   Config{KeyFile: keyFile, KeyCommand: legacy.KeyCommand},
 		Profiles: Profiles{Entries: legacy.Profiles},
 	}
 	if d.Entries == nil {
