@@ -2,14 +2,14 @@
 
 ## Overview
 
-autopass is a CLI tool that wraps interactive commands in a pseudo-terminal, watches their output for configurable patterns, and automatically responds with encrypted secrets. It functions like Linux `expect` but with built-in secret management.
+passauto is a CLI tool that wraps interactive commands in a pseudo-terminal, watches their output for configurable patterns, and automatically responds with encrypted secrets. It functions like Linux `expect` but with built-in secret management.
 
 ## High-Level Flow
 
 ```
 ┌─────────────────────────────────────────────────────────┐
 │                      User                                │
-│   autopass myserver --then "ls" --then "exit"            │
+│   passauto myserver --then "ls" --then "exit"            │
 └─────────────────────┬───────────────────────────────────┘
                       │
                       ▼
@@ -56,8 +56,8 @@ Responsible for:
 - Building `engine.Options` and calling `engine.Run()`
 
 Key dispatch logic:
-- `autopass <name>` → `root.go` → `runProfileWithSteps()` (loads profile, decrypts, runs)
-- `autopass add/update/list/remove/version` → respective command handlers
+- `passauto <name>` → `root.go` → `runProfileWithSteps()` (loads profile, decrypts, runs)
+- `passauto add/update/list/remove/version` → respective command handlers
 
 ### Engine (`internal/engine/`)
 
@@ -109,7 +109,7 @@ Goroutine 2: pipeReader → stdout + pattern matching
 
 #### Encryption Modes
 
-autopass supports two encryption paths:
+passauto supports two encryption paths:
 
 1. **SSH-derived (default)** — Key derived from local SSH private key via HKDF. No network calls, works offline.
 2. **KMS envelope (team/enterprise)** — AWS KMS generates a data encryption key (DEK). Encrypted DEK stored alongside ciphertext.
@@ -125,8 +125,8 @@ autopass supports two encryption paths:
 │     Raw key bytes                                   │
 │         │                                           │
 │         ├─ HKDF-SHA256                              │
-│         │   Salt: "autopass-salt-v1"                │
-│         │   Info: "autopass-v1"                     │
+│         │   Salt: "passauto-salt-v1"                │
+│         │   Info: "passauto-v1"                     │
 │         ▼                                           │
 │     256-bit AES key                                 │
 │         │                                           │
@@ -158,7 +158,7 @@ autopass supports two encryption paths:
 
 ### Data (`internal/data/`)
 
-Single JSON file at `~/.autopass/data.json` (permissions 0600):
+Single JSON file at `~/.passauto/data.json` (permissions 0600):
 
 ```json
 {

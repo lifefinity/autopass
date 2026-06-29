@@ -8,10 +8,10 @@
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability in autopass, please report it responsibly:
+If you discover a security vulnerability in passauto, please report it responsibly:
 
 1. **Do NOT** open a public GitHub issue
-2. Use [GitHub Security Advisories](https://github.com/lifefinity/autopass/security/advisories/new) to report privately
+2. Use [GitHub Security Advisories](https://github.com/lifefinity/passauto/security/advisories/new) to report privately
 3. Include:
    - Description of the vulnerability
    - Steps to reproduce

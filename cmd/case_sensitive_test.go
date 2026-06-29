@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/lifefinity/autopass/internal/data"
-	"github.com/lifefinity/autopass/internal/engine"
+	"github.com/lifefinity/passauto/internal/data"
+	"github.com/lifefinity/passauto/internal/engine"
 )
 
 // buildEnginePatterns mirrors the logic in runProfileWithSteps for testability.

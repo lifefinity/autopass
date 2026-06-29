@@ -3,32 +3,32 @@
 ## Installation
 
 ```bash
-cd projects/autopass
-go build -o autopass.exe .
+cd projects/passauto
+go build -o passauto.exe .
 ```
 
 Or use the Makefile:
 
 ```bash
-make build        # Output: bin/autopass.exe
+make build        # Output: bin/passauto.exe
 make install      # Install to GOPATH/bin
 ```
 
 ## First-Time Setup
 
-On first use, autopass will auto-initialize. You can also run manually:
+On first use, passauto will auto-initialize. You can also run manually:
 
 ```bash
-autopass init
+passauto init
 ```
 
-This creates `~/.autopass/data.json` and configures encryption.
+This creates `~/.passauto/data.json` and configures encryption.
 
 ### How `init` works
 
 1. If `--key <path>` is specified, uses that SSH key
 2. Otherwise looks for `~/.ssh/id_ed25519`, `id_rsa`, or `id_ecdsa`
-3. If no SSH key is found, generates a dedicated key at `~/.autopass/autopass_key`
+3. If no SSH key is found, generates a dedicated key at `~/.passauto/passauto_key`
 
 If the selected key is passphrase-protected, you will be prompted once to verify access.
 
@@ -42,9 +42,9 @@ If the selected key is passphrase-protected, you will be prompted once to verify
 ### Examples
 
 ```bash
-autopass init                              # Auto-detect or generate
-autopass init --key ~/.ssh/id_ed25519      # Use a specific key
-autopass init --no-passphrase              # Generate key without passphrase
+passauto init                              # Auto-detect or generate
+passauto init --key ~/.ssh/id_ed25519      # Use a specific key
+passauto init --no-passphrase              # Generate key without passphrase
 ```
 
 ## Adding a Profile
@@ -52,7 +52,7 @@ autopass init --no-passphrase              # Generate key without passphrase
 ### Interactive Mode
 
 ```bash
-autopass add myserver
+passauto add myserver
 ```
 
 Prompts for command, pattern, and secret.
@@ -60,9 +60,9 @@ Prompts for command, pattern, and secret.
 ### With Flags
 
 ```bash
-autopass add -c "ssh deploy@prod-server" -m "password:" -d "Production server" prod
-autopass add -c "psql -h db.example.com -U admin mydb" -m "password" -p "=>\s*$" -d "Main database" mydb
-autopass add -c "kinit admin@CORP.COM" -m "Password:" -d "Kerberos auth" --after "klist" krb
+passauto add -c "ssh deploy@prod-server" -m "password:" -d "Production server" prod
+passauto add -c "psql -h db.example.com -U admin mydb" -m "password" -p "=>\s*$" -d "Main database" mydb
+passauto add -c "kinit admin@CORP.COM" -m "Password:" -d "Kerberos auth" --after "klist" krb
 ```
 
 ### Add Flags
@@ -70,7 +70,7 @@ autopass add -c "kinit admin@CORP.COM" -m "Password:" -d "Kerberos auth" --after
 | Flag | Short | Description |
 |------|-------|-------------|
 | `--command` | `-c` | Command to execute |
-| `--desc` | `-d` | Short description (shown in `autopass list`) |
+| `--desc` | `-d` | Short description (shown in `passauto list`) |
 | `--match` | `-m` | Regex pattern to match (can specify multiple) |
 | `--prompt` | `-p` | Shell prompt regex for post-login `--then` steps |
 | `--timeout` | `-t` | Timeout per match (default: `30s`) |
@@ -93,7 +93,7 @@ autopass add -c "kinit admin@CORP.COM" -m "Password:" -d "Kerberos auth" --after
 ### Example: PostgreSQL with built-in steps
 
 ```bash
-autopass add -c "psql -h localhost -U admin mydb" \
+passauto add -c "psql -h localhost -U admin mydb" \
   -m "password" -p "=>\s*$" \
   --then "\timing on" --then "SET search_path TO public;" \
   -d "Local PG with timing" mydb
@@ -102,7 +102,7 @@ autopass add -c "psql -h localhost -U admin mydb" \
 ### Example: kinit with post-exit command
 
 ```bash
-autopass add -c "kinit admin@CORP.COM" -m "Password:" \
+passauto add -c "kinit admin@CORP.COM" -m "Password:" \
   --after "date" --after "echo 'Midway refreshed'" \
   -d "Kerberos auth" krb
 ```
@@ -112,40 +112,40 @@ autopass add -c "kinit admin@CORP.COM" -m "Password:" \
 When a server has multiple services (SSH, PostgreSQL, Oracle, etc.), use `-s` to store them under the same name:
 
 ```bash
-autopass add -c "ssh admin@prod" -m "password:" -s ssh prod
-autopass add -c "psql -h prod -U admin" -m "password" -s pg prod
+passauto add -c "ssh admin@prod" -m "password:" -s ssh prod
+passauto add -c "psql -h prod -U admin" -m "password" -s pg prod
 
-autopass prod -s ssh   # run SSH profile
-autopass prod -s pg    # run PostgreSQL profile
-autopass prod          # if ambiguous, shows selection menu
+passauto prod -s ssh   # run SSH profile
+passauto prod -s pg    # run PostgreSQL profile
+passauto prod          # if ambiguous, shows selection menu
 ```
 
 Uniqueness is enforced on `(name, service)` pairs. Profiles without `-s` have an empty service field.
 
 ## KMS Envelope Encryption
 
-For team/enterprise use, autopass supports AWS KMS instead of SSH key derivation:
+For team/enterprise use, passauto supports AWS KMS instead of SSH key derivation:
 
 ```bash
 # New profile with KMS
-autopass add -c "ssh admin@prod" -m "password:" --kms-key-id arn:aws:kms:us-east-1:123456:key/abc prod
+passauto add -c "ssh admin@prod" -m "password:" --kms-key-id arn:aws:kms:us-east-1:123456:key/abc prod
 
 # Switch existing profile to KMS
-autopass update prod --kms-key-id arn:aws:kms:us-east-1:123456:key/abc
+passauto update prod --kms-key-id arn:aws:kms:us-east-1:123456:key/abc
 ```
 
 Requires AWS credentials and IAM permissions: `kms:GenerateDataKey`, `kms:Decrypt`.
 
 ## TOTP / 2FA Support
 
-autopass can auto-fill time-based one-time passwords (TOTP/2FA). The TOTP secret seed is encrypted at rest alongside your password.
+passauto can auto-fill time-based one-time passwords (TOTP/2FA). The TOTP secret seed is encrypted at rest alongside your password.
 
 ### TOTP-Only Profile
 
 For services that only prompt for a verification code:
 
 ```bash
-autopass add -c "vpn-connect" -m "Verification code:" myVPN --totp
+passauto add -c "vpn-connect" -m "Verification code:" myVPN --totp
 # Enter secret: (press Enter — no password needed)
 # Enter TOTP secret seed: <paste your base32 seed>
 ```
@@ -155,7 +155,7 @@ autopass add -c "vpn-connect" -m "Verification code:" myVPN --totp
 For services that prompt for password first, then a TOTP code:
 
 ```bash
-autopass add -c "ssh user@server" -m "password:" --totp-match "Verification code:" myserver
+passauto add -c "ssh user@server" -m "password:" --totp-match "Verification code:" myserver
 # Enter secret: <your password>
 # Enter TOTP secret seed: <your base32 TOTP seed>
 ```
@@ -164,16 +164,16 @@ autopass add -c "ssh user@server" -m "password:" --totp-match "Verification code
 
 ```bash
 # Change the TOTP seed
-autopass update myserver --totp-secret
+passauto update myserver --totp-secret
 
 # Change which prompt triggers TOTP
-autopass update myserver --totp-match "OTP:"
+passauto update myserver --totp-match "OTP:"
 ```
 
 ### How It Works
 
 - The TOTP seed (base32) is stored encrypted with the same key as your password
-- At runtime, when a TOTP pattern matches, autopass generates a fresh 6-digit code (RFC 6238, HMAC-SHA1, 30-second period)
+- At runtime, when a TOTP pattern matches, passauto generates a fresh 6-digit code (RFC 6238, HMAC-SHA1, 30-second period)
 - The code is generated just-in-time — not before the prompt appears
 
 ### Finding Your TOTP Seed
@@ -185,12 +185,12 @@ The TOTP seed is the base32 string you normally scan as a QR code. Most authenti
 ## Running a Profile
 
 ```bash
-autopass <profile>
-autopass <profile> --then "cmd"       # Additional session command
-autopass <profile> --script file      # Commands from file
-autopass <profile> --after "cmd"      # Run after process exits
-autopass <profile> -e KEY=VALUE       # Inject environment variable
-autopass <profile> --quiet            # Suppress terminal output
+passauto <profile>
+passauto <profile> --then "cmd"       # Additional session command
+passauto <profile> --script file      # Commands from file
+passauto <profile> --after "cmd"      # Run after process exits
+passauto <profile> -e KEY=VALUE       # Inject environment variable
+passauto <profile> --quiet            # Suppress terminal output
 ```
 
 ### Environment Variables
@@ -198,7 +198,7 @@ autopass <profile> --quiet            # Suppress terminal output
 The child process inherits the current shell environment. Use `--env`/`-e` to inject additional variables:
 
 ```bash
-autopass deploy -e HOST=prod.example.com -e PORT=5432
+passauto deploy -e HOST=prod.example.com -e PORT=5432
 ```
 
 If the profile command uses shell variables (e.g., `ssh $USER@$HOST`), they are expanded at runtime from the inherited + injected environment.
@@ -208,9 +208,9 @@ If the profile command uses shell variables (e.g., `ssh $USER@$HOST`), they are 
 After the password prompt is answered, chain commands inside the session:
 
 ```bash
-autopass mydb --then "SELECT now();" --then "\q"
-autopass mydb --script queries.sql
-autopass mydb --then "\timing on" --script queries.sql --then "\q"
+passauto mydb --then "SELECT now();" --then "\q"
+passauto mydb --script queries.sql
+passauto mydb --then "\timing on" --script queries.sql --then "\q"
 ```
 
 Profile-stored `--then` steps run first, then runtime `--then`/`--script` commands.
@@ -229,13 +229,13 @@ SELECT * FROM users LIMIT 10;
 ## Managing Profiles
 
 ```bash
-autopass list                                    # List all profiles
-autopass remove prod                             # Delete a profile
-autopass update prod --secret                    # Change secret
-autopass update prod -c "ssh newuser@host"       # Change command
-autopass update prod -d "New description"        # Change description
-autopass update prod --then "ls" --then "pwd"    # Set post-login steps
-autopass update prod --after "notify-send done"  # Set post-exit commands
+passauto list                                    # List all profiles
+passauto remove prod                             # Delete a profile
+passauto update prod --secret                    # Change secret
+passauto update prod -c "ssh newuser@host"       # Change command
+passauto update prod -d "New description"        # Change description
+passauto update prod --then "ls" --then "pwd"    # Set post-login steps
+passauto update prod --after "notify-send done"  # Set post-exit commands
 ```
 
 ### Update Flags
@@ -259,7 +259,7 @@ Only specified flags are changed; unspecified fields remain unchanged.
 Switch all secrets to a new SSH key:
 
 ```bash
-autopass change-key ~/.ssh/id_ed25519_new
+passauto change-key ~/.ssh/id_ed25519_new
 ```
 
 This:
@@ -274,35 +274,35 @@ Both old and new keys can be passphrase-protected.
 ### Backup
 
 ```bash
-autopass backup /mnt/usb/autopass-backup
+passauto backup /mnt/usb/passauto-backup
 ```
 
 ### Restore
 
 ```bash
-autopass restore /mnt/usb/autopass-backup
-autopass restore ~/backup --force           # Overwrite existing
+passauto restore /mnt/usb/passauto-backup
+passauto restore ~/backup --force           # Overwrite existing
 ```
 
 ## Export & Import
 
 ```bash
-autopass export profiles.json              # Secrets excluded
-autopass import profiles.json              # Merge with existing
-autopass import profiles.json --force      # Overwrite on conflict
+passauto export profiles.json              # Secrets excluded
+passauto import profiles.json              # Merge with existing
+passauto import profiles.json --force      # Overwrite on conflict
 ```
 
-> Imported profiles have no secrets. Use `autopass update <name> --secret` to set them.
+> Imported profiles have no secrets. Use `passauto update <name> --secret` to set them.
 
 ## Shell Completion
 
 ```bash
-autopass completion bash    # eval "$(autopass completion bash)"
-autopass completion zsh     # eval "$(autopass completion zsh)"
-autopass completion fish    # autopass completion fish > ~/.config/fish/completions/autopass.fish
+passauto completion bash    # eval "$(passauto completion bash)"
+passauto completion zsh     # eval "$(passauto completion zsh)"
+passauto completion fish    # passauto completion fish > ~/.config/fish/completions/passauto.fish
 ```
 
-Tab-completion works for profile names: `autopass <TAB>`, `autopass update <TAB>`, `autopass remove <TAB>`.
+Tab-completion works for profile names: `passauto <TAB>`, `passauto update <TAB>`, `passauto remove <TAB>`.
 
 ## Pattern Tips
 
@@ -323,21 +323,21 @@ Use `--case-sensitive` only when you need exact matching.
 
 ### "Profile not found"
 
-Check with `autopass list`.
+Check with `passauto list`.
 
 ### Secret not being sent
 
 1. Pattern may not match — try a broader regex (e.g. `password`)
 2. ANSI escape codes are stripped before matching
-3. Check timeout — increase with `autopass update <name> -t 60s`
+3. Check timeout — increase with `passauto update <name> -t 60s`
 
 ### Process hangs after error
 
-If the child process exits with an error (non-zero), autopass exits immediately. If it seems stuck, the child process may still be running — check with `ps`.
+If the child process exits with an error (non-zero), passauto exits immediately. If it seems stuck, the child process may still be running — check with `ps`.
 
 ### SSH key passphrase
 
-If your SSH key has a passphrase, autopass will prompt for it once per invocation.
+If your SSH key has a passphrase, passauto will prompt for it once per invocation.
 
 ## Platform Support
 

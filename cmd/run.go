@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/lifefinity/autopass/internal/crypto"
-	"github.com/lifefinity/autopass/internal/engine"
-	"github.com/lifefinity/autopass/internal/totp"
+	"github.com/lifefinity/passauto/internal/crypto"
+	"github.com/lifefinity/passauto/internal/engine"
+	"github.com/lifefinity/passauto/internal/totp"
 )
 
 func runProfileWithSteps(profileName string, runOpts profileRunOpts) error {

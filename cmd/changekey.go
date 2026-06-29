@@ -9,7 +9,7 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 
-	"github.com/lifefinity/autopass/internal/crypto"
+	"github.com/lifefinity/passauto/internal/crypto"
 )
 
 var changeKeyCmd = &cobra.Command{
@@ -21,8 +21,8 @@ This decrypts all stored secrets using the current key, then re-encrypts
 them with the new key. Both keys may be passphrase-protected.
 
 Examples:
-  autopass change-key ~/.ssh/id_ed25519_new
-  autopass change-key /path/to/other_key`,
+  passauto change-key ~/.ssh/id_ed25519_new
+  passauto change-key /path/to/other_key`,
 	Args: cobra.ExactArgs(1),
 	RunE: runChangeKey,
 }

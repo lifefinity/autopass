@@ -11,8 +11,8 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 
-	"github.com/lifefinity/autopass/internal/crypto"
-	"github.com/lifefinity/autopass/internal/data"
+	"github.com/lifefinity/passauto/internal/crypto"
+	"github.com/lifefinity/passauto/internal/data"
 )
 
 var (
@@ -33,32 +33,32 @@ var addCmd = &cobra.Command{
 	Use:   "add <profile>",
 	Short: "Store a secret and create a profile",
 	Long: `Store an encrypted secret and create a named profile that auto-answers
-prompts. Run with 'autopass <profile>' afterwards.
+prompts. Run with 'passauto <profile>' afterwards.
 
 Examples:
   # SSH server
-  autopass add -c "ssh deploy@prod-server" -m "password:" prod
+  passauto add -c "ssh deploy@prod-server" -m "password:" prod
 
   # PostgreSQL (with prompt pattern for post-login commands)
-  autopass add -c "psql -h db.example.com -U admin mydb" -m "password" -p "=>\s*$" mydb
+  passauto add -c "psql -h db.example.com -U admin mydb" -m "password" -p "=>\s*$" mydb
 
   # MySQL
-  autopass add -c "mysql -h db.example.com -u root -p" -m "password:" mysql-prod
+  passauto add -c "mysql -h db.example.com -u root -p" -m "password:" mysql-prod
 
   # Sudo
-  autopass add -c "sudo apt upgrade -y" -m "password" apt-upgrade
+  passauto add -c "sudo apt upgrade -y" -m "password" apt-upgrade
 
   # Kerberos
-  autopass add -c "kinit admin@EXAMPLE.COM" -m "password for" krb
+  passauto add -c "kinit admin@EXAMPLE.COM" -m "password for" krb
 
   # Interactive mode (prompts for command and pattern)
-  autopass add myservice
+  passauto add myservice
 
 Post-login automation (use --then/--script when running):
-  autopass mydb --then "SELECT now();" --then "\q"
-  autopass mydb --script queries.sql
+  passauto mydb --then "SELECT now();" --then "\q"
+  passauto mydb --script queries.sql
 
-  The -p/--prompt flag in 'add' tells autopass what the shell prompt looks
+  The -p/--prompt flag in 'add' tells passauto what the shell prompt looks
   like, so it knows when to send the next --then command.
 
 Post-exit commands (--after):
@@ -66,25 +66,25 @@ Post-exit commands (--after):
   Useful for non-interactive tools like mwinit, kinit, or ssh one-shot commands.
 
   # mwinit completes → run date
-  autopass add -c "mwinit -s -o" -m "PIN:" --after "date" mwinit
+  passauto add -c "mwinit -s -o" -m "PIN:" --after "date" mwinit
 
   # SSH session ends → sync local files
-  autopass add -c "ssh deploy@prod" -m "password:" --after "echo 'session ended'" prod
+  passauto add -c "ssh deploy@prod" -m "password:" --after "echo 'session ended'" prod
 
   # Chain multiple post-exit commands
-  autopass add -c "kinit user@REALM" -m "Password:" \
+  passauto add -c "kinit user@REALM" -m "Password:" \
     --after "klist" --after "echo 'ticket acquired'" krb
 
 Pattern matching tips:
   Patterns are regex and case-insensitive by default. A partial match is enough.
   # "password" matches "Password for user demo1:", "Enter password:", etc.
-  autopass add -c "psql -U demo1 -h localhost" -m "password" mydb
+  passauto add -c "psql -U demo1 -h localhost" -m "password" mydb
 
   # Use regex for more control: match any username
-  autopass add -c "psql -U admin -h db" -m "Password for user .+:" mydb
+  passauto add -c "psql -U admin -h db" -m "Password for user .+:" mydb
 
   # Match multiple different prompts
-  autopass add -c "ssh host" -m "password" -m "passphrase" myserver`,
+  passauto add -c "ssh host" -m "password" -m "passphrase" myserver`,
 	Args: cobra.ExactArgs(1),
 	RunE: runAdd,
 }
@@ -255,7 +255,7 @@ func runAdd(cmd *cobra.Command, args []string) error {
 	}
 
 	fmt.Println()
-	fmt.Printf("Done! Run with: autopass %s\n", name)
+	fmt.Printf("Done! Run with: passauto %s\n", name)
 	return nil
 }
 

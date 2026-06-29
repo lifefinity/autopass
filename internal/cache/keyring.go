@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	serviceName = "autopass"
+	serviceName = "passauto"
 	ttlDefault  = 1 * time.Hour
 	tsSeparator = "|"
 )

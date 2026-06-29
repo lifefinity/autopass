@@ -10,9 +10,9 @@ import (
 
 	"golang.org/x/term"
 
-	"github.com/lifefinity/autopass/internal/cache"
-	"github.com/lifefinity/autopass/internal/crypto"
-	"github.com/lifefinity/autopass/internal/data"
+	"github.com/lifefinity/passauto/internal/cache"
+	"github.com/lifefinity/passauto/internal/crypto"
+	"github.com/lifefinity/passauto/internal/data"
 )
 
 var (
@@ -46,7 +46,7 @@ func loadData() (*data.Data, error) {
 		if _, legErr := os.Stat(legacyPath); legErr == nil {
 			return data.Load(legacyPath)
 		}
-		fmt.Println("autopass is not initialized. Running setup now...")
+		fmt.Println("passauto is not initialized. Running setup now...")
 		if initErr := runInit(nil, nil); initErr != nil {
 			return nil, fmt.Errorf("auto-initialization failed: %w", initErr)
 		}

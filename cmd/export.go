@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/lifefinity/autopass/internal/data"
+	"github.com/lifefinity/passauto/internal/data"
 	"github.com/spf13/cobra"
 )
 

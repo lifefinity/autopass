@@ -10,27 +10,28 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "autopass",
-	Short: "Automated interactive prompt responder",
-	Long: `Wraps commands in a PTY, matches output patterns, and responds with decrypted secrets.
-
-Run a profile:
-  autopass <profile>              Run with auto-answering
-  autopass <profile> -s <service> Run specific service profile
-  autopass <profile> --then "cmd" Execute command after login
-  autopass <profile> --script f   Execute commands from file after login
-  autopass <profile> --prompt "x" Override shell prompt pattern
-  autopass <profile> -e K=V       Inject environment variable
-  autopass <profile> --after cmd  Run command in new shell after profile exits
-  autopass <profile> --quiet      Suppress terminal output
+	Use:   "passauto",
+	Short: "Auto-fill passwords and prompts for CLI tools",
+	Long: `Store secrets encrypted, auto-type them when commands ask for passwords or codes.
 
 Examples:
-  autopass mwinit                            # Auto-fill PIN for mwinit
-  autopass mydb --then "SELECT now();"       # Run SQL after connecting
-  autopass prod --script deploy.sh           # Run script after login
-  autopass mydb --then "\timing" --then "\q" # Chain multiple commands
-  autopass deploy -e HOST=prod.example.com   # Inject env var
-  autopass mydb -s staging                   # Run the 'staging' service variant`,
+  1. Auto-fill SSH password
+     1) passauto add -c "ssh user@host" -m "password:" myserver
+     2) passauto myserver
+
+  2. Run SQL after database login
+     1) passauto add -c "psql -h db -U admin mydb" -m "password" mydb
+     2) passauto mydb --then "SELECT now();" --then "\q"
+
+  3. Password + TOTP two-factor auth
+     1) passauto add -c "ssh admin@secure" -m "password:" --totp-match "code:" prod
+     2) passauto prod
+
+  4. Multiple services on the same server
+     1) passauto add -c "ssh admin@prod" -m "password:" -s ssh prod
+     2) passauto add -c "psql -h prod -U app" -m "password" -s pg prod
+     3) passauto prod -s ssh
+     4) passauto prod -s pg`,
 	Version: Version,
 	Args:    cobra.ArbitraryArgs,
 	ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {

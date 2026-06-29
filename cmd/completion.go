@@ -9,23 +9,23 @@ import (
 var completionCmd = &cobra.Command{
 	Use:   "completion [bash|zsh|fish|powershell]",
 	Short: "Generate shell completion script",
-	Long: `Generate shell completion script for autopass.
+	Long: `Generate shell completion script for passauto.
 
 Bash:
   # Add to ~/.bashrc:
-  eval "$(autopass completion bash)"
+  eval "$(passauto completion bash)"
 
 Zsh:
   # Add to ~/.zshrc:
-  eval "$(autopass completion zsh)"
+  eval "$(passauto completion zsh)"
 
 Fish:
   # Add to ~/.config/fish/completions/:
-  autopass completion fish > ~/.config/fish/completions/autopass.fish
+  passauto completion fish > ~/.config/fish/completions/passauto.fish
 
 PowerShell:
   # Add to your profile:
-  autopass completion powershell | Out-String | Invoke-Expression`,
+  passauto completion powershell | Out-String | Invoke-Expression`,
 	Args:      cobra.ExactArgs(1),
 	ValidArgs: []string{"bash", "zsh", "fish", "powershell"},
 	RunE: func(cmd *cobra.Command, args []string) error {

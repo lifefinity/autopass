@@ -7,7 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/lifefinity/autopass/internal/crypto"
+	"github.com/lifefinity/passauto/internal/crypto"
 )
 
 var restoreForce bool
@@ -19,8 +19,8 @@ var restoreCmd = &cobra.Command{
 Will not overwrite existing data unless --force is specified.
 
 Example:
-  autopass restore /mnt/usb/autopass-backup
-  autopass restore ~/Dropbox/autopass-backup --force`,
+  passauto restore /mnt/usb/passauto-backup
+  passauto restore ~/Dropbox/passauto-backup --force`,
 	Args: cobra.ExactArgs(1),
 	RunE: runRestore,
 }
@@ -38,13 +38,13 @@ func runRestore(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("getting home directory: %w", err)
 	}
 
-	autopassDir := filepath.Join(home, ".autopass")
-	dataFile := filepath.Join(autopassDir, "data.json")
+	passautoDir := filepath.Join(home, ".passauto")
+	dataFile := filepath.Join(passautoDir, "data.json")
 
 	// Check if already initialized
 	if !restoreForce {
 		if _, err := os.Stat(dataFile); err == nil {
-			return fmt.Errorf("autopass already initialized. Use --force to overwrite")
+			return fmt.Errorf("passauto already initialized. Use --force to overwrite")
 		}
 	}
 
@@ -60,7 +60,7 @@ func runRestore(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("reading backup directory: %w", err)
 	}
 
-	knownKeys := []string{"autopass_key", "id_ed25519", "id_rsa", "id_ecdsa"}
+	knownKeys := []string{"passauto_key", "id_ed25519", "id_rsa", "id_ecdsa"}
 	var keyFile string
 	for _, name := range knownKeys {
 		for _, e := range entries {
@@ -94,11 +94,11 @@ func runRestore(cmd *cobra.Command, args []string) error {
 	}
 
 	// Restore
-	if err := os.MkdirAll(autopassDir, 0700); err != nil {
-		return fmt.Errorf("creating autopass directory: %w", err)
+	if err := os.MkdirAll(passautoDir, 0700); err != nil {
+		return fmt.Errorf("creating passauto directory: %w", err)
 	}
 
-	destKey := filepath.Join(autopassDir, keyFile)
+	destKey := filepath.Join(passautoDir, keyFile)
 	if err := copyFile(srcKey, destKey); err != nil {
 		return fmt.Errorf("restoring key: %w", err)
 	}

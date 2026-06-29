@@ -25,13 +25,13 @@ var reservedNames = map[string]bool{
 	"help":    true,
 }
 
-// Config holds user-editable settings (~/.autopass/config.json)
+// Config holds user-editable settings (~/.passauto/config.json)
 type Config struct {
 	KeyFile    string `json:"key_file"`
 	KeyCommand string `json:"key_command,omitempty"`
 }
 
-// Profiles holds encrypted profile data (~/.autopass/data/profiles.json)
+// Profiles holds encrypted profile data (~/.passauto/data/profiles.json)
 type Profiles struct {
 	Entries map[string]Profile `json:"profiles"`
 }
@@ -84,16 +84,25 @@ func (d *Duration) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-// Dir returns the autopass root directory (~/.autopass)
+// Dir returns the passauto root directory (~/.passauto)
+// Falls back to ~/.autopass for backward compatibility.
 func Dir() (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(home, ".autopass"), nil
+	newDir := filepath.Join(home, ".passauto")
+	if _, err := os.Stat(newDir); err == nil {
+		return newDir, nil
+	}
+	oldDir := filepath.Join(home, ".autopass")
+	if _, err := os.Stat(oldDir); err == nil {
+		return oldDir, nil
+	}
+	return newDir, nil
 }
 
-// ConfigPath returns ~/.autopass/config.json
+// ConfigPath returns ~/.passauto/config.json
 func ConfigPath() (string, error) {
 	dir, err := Dir()
 	if err != nil {
@@ -102,7 +111,7 @@ func ConfigPath() (string, error) {
 	return filepath.Join(dir, "config.json"), nil
 }
 
-// ProfilesPath returns ~/.autopass/data/profiles.json
+// ProfilesPath returns ~/.passauto/data/profiles.json
 func ProfilesPath() (string, error) {
 	dir, err := Dir()
 	if err != nil {
@@ -277,7 +286,7 @@ func (p *Profiles) AddProfile(name string, profile Profile) error {
 		if profile.Service != "" {
 			return fmt.Errorf("profile %q (service=%s) already exists", name, profile.Service)
 		}
-		return fmt.Errorf("profile %q already exists (use 'autopass update %s' to modify)", name, name)
+		return fmt.Errorf("profile %q already exists (use 'passauto update %s' to modify)", name, name)
 	}
 	p.Entries[key] = profile
 	return nil
@@ -352,7 +361,7 @@ func (e *AmbiguousProfileError) Error() string {
 		if svc == "" {
 			svc = "(default)"
 		}
-		fmt.Fprintf(&sb, "  autopass %s -s %s\n", e.Name, svc)
+		fmt.Fprintf(&sb, "  passauto %s -s %s\n", e.Name, svc)
 	}
 	return sb.String()
 }

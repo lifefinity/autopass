@@ -18,14 +18,14 @@ body:
     attributes:
       label: Steps to reproduce
       placeholder: |
-        1. Run `autopass add ...`
+        1. Run `passauto add ...`
         2. ...
     validations:
       required: true
   - type: input
     attributes:
       label: Version
-      placeholder: "autopass version (e.g. v0.3.0)"
+      placeholder: "passauto version (e.g. v0.3.0)"
     validations:
       required: true
   - type: dropdown

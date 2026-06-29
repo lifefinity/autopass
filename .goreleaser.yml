@@ -6,7 +6,7 @@ before:
 
 builds:
   - main: .
-    binary: autopass
+    binary: passauto
     env:
       - CGO_ENABLED=0
     goos:
@@ -18,9 +18,9 @@ builds:
       - arm64
     ldflags:
       - -s -w
-      - -X github.com/lifefinity/autopass/cmd.Version={{.Version}}
-      - -X github.com/lifefinity/autopass/cmd.Commit={{.ShortCommit}}
-      - -X github.com/lifefinity/autopass/cmd.BuildDate={{.Date}}
+      - -X github.com/lifefinity/passauto/cmd.Version={{.Version}}
+      - -X github.com/lifefinity/passauto/cmd.Commit={{.ShortCommit}}
+      - -X github.com/lifefinity/passauto/cmd.BuildDate={{.Date}}
 
 archives:
   - format: tar.gz

@@ -7,14 +7,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/lifefinity/autopass/internal/data"
+	"github.com/lifefinity/passauto/internal/data"
 )
 
 // setupTestData creates a temporary data.json for testing.
 func setupTestData(t *testing.T) (string, func()) {
 	t.Helper()
 	dir := t.TempDir()
-	path := filepath.Join(dir, ".autopass", "data.json")
+	path := filepath.Join(dir, ".passauto", "data.json")
 	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
 		t.Fatalf("creating test dir: %v", err)
 	}

@@ -16,8 +16,8 @@ var backupCmd = &cobra.Command{
 Store the backup securely — it contains your encrypted secrets and the key to decrypt them.
 
 Example:
-  autopass backup /mnt/usb/autopass-backup
-  autopass backup ~/Dropbox/autopass-backup`,
+  passauto backup /mnt/usb/passauto-backup
+  passauto backup ~/Dropbox/passauto-backup`,
 	Args: cobra.ExactArgs(1),
 	RunE: runBackup,
 }
@@ -35,8 +35,8 @@ func runBackup(cmd *cobra.Command, args []string) error {
 	}
 
 	home, _ := os.UserHomeDir()
-	autopassDir := filepath.Join(home, ".autopass")
-	dataFile := filepath.Join(autopassDir, "data.json")
+	passautoDir := filepath.Join(home, ".passauto")
+	dataFile := filepath.Join(passautoDir, "data.json")
 
 	// Resolve key path
 	keyPath := d.KeyFile

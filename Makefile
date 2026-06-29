@@ -1,4 +1,4 @@
-BINARY  := autopass
+BINARY  := passauto
 GOFLAGS := -trimpath
 
 VERSION := $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
@@ -6,9 +6,9 @@ COMMIT  := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 DATE    := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || echo "unknown")
 
 LDFLAGS := -s -w \
-	-X github.com/lifefinity/autopass/cmd.Version=$(VERSION) \
-	-X github.com/lifefinity/autopass/cmd.Commit=$(COMMIT) \
-	-X github.com/lifefinity/autopass/cmd.BuildDate=$(DATE)
+	-X github.com/lifefinity/passauto/cmd.Version=$(VERSION) \
+	-X github.com/lifefinity/passauto/cmd.Commit=$(COMMIT) \
+	-X github.com/lifefinity/passauto/cmd.BuildDate=$(DATE)
 
 .PHONY: all deps build run test fmt vet lint sec vuln check clean install
 

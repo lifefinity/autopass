@@ -6,7 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/lifefinity/autopass/internal/data"
+	"github.com/lifefinity/passauto/internal/data"
 )
 
 var listCmd = &cobra.Command{
@@ -79,7 +79,7 @@ func runList(cmd *cobra.Command, args []string) error {
 		}
 	}
 	fmt.Println()
-	fmt.Println("Run: autopass <name>")
+	fmt.Println("Run: passauto <name>")
 	fmt.Println()
 
 	return nil
@@ -109,18 +109,18 @@ func friendlyPattern(match string) string {
 }
 
 func printExamples() {
-	fmt.Println("Get started with 'autopass add <name>'. Examples:")
+	fmt.Println("Get started with 'passauto add <name>'. Examples:")
 	fmt.Println()
-	fmt.Println("  autopass add mwinit       # Midway (Amazon)")
-	fmt.Println("  autopass add myserver     # SSH to a host")
-	fmt.Println("  autopass add mysudo       # Sudo commands")
-	fmt.Println("  autopass add docker       # Docker login")
-	fmt.Println("  autopass add aws-sso      # AWS SSO login")
-	fmt.Println("  autopass add mysql        # MySQL client")
-	fmt.Println("  autopass add git-push     # Git HTTPS credential")
+	fmt.Println("  passauto add mwinit       # Midway (Amazon)")
+	fmt.Println("  passauto add myserver     # SSH to a host")
+	fmt.Println("  passauto add mysudo       # Sudo commands")
+	fmt.Println("  passauto add docker       # Docker login")
+	fmt.Println("  passauto add aws-sso      # AWS SSO login")
+	fmt.Println("  passauto add mysql        # MySQL client")
+	fmt.Println("  passauto add git-push     # Git HTTPS credential")
 	fmt.Println()
 	fmt.Println("Or with flags:")
-	fmt.Println("  autopass add -c \"ssh user@host\" -m \"password:\" myserver")
+	fmt.Println("  passauto add -c \"ssh user@host\" -m \"password:\" myserver")
 	fmt.Println()
-	fmt.Println("Then run: autopass <name>")
+	fmt.Println("Then run: passauto <name>")
 }
